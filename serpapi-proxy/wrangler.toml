@@ -1,0 +1,8 @@
+name = "vayudrishti-serpapi"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+# Secret: wrangler secret put SERPAPI_KEY   (never commit the key)
+# Optional counters: wrangler kv namespace create COUNTERS, then add the binding:
+# [[kv_namespaces]]
+# binding = "COUNTERS"
+# id = "<id>"
