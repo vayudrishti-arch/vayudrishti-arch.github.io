@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install
-        run: pip install numpy "xgboost>=3.0" ecmwflibs eccodes numcodecs
+        run: pip install numpy scikit-learn "xgboost>=3.0" ecmwflibs eccodes numcodecs
       - name: Nightly run (promotion is controlled by nightly/PROMOTE)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
