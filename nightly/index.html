@@ -1,0 +1,16 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VayuDrishti nightly learning</title>
+<style>body{font:15px/1.5 system-ui,sans-serif;max-width:860px;margin:2rem auto;padding:0 1rem;color:#1b2430}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #ddd;padding:.3rem .5rem;text-align:left;vertical-align:top}.ok{color:#0a7a3b}.bad{color:#b3261e}code{background:#f2f4f7;padding:0 .25rem}</style></head><body>
+<h1>VayuDrishti nightly learning</h1><p id="note">Loading...</p><div id="latest"></div><h2>History</h2><table id="hist"></table>
+<p><a href="../app/">Back to the forecast</a></p>
+<script>
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+fetch('status.json',{cache:'no-store'}).then(r=>r.json()).then(s=>{
+ note.textContent=s.note+' Promotion is '+(s.promotion_enabled?'ON: a candidate that passes every gate replaces the live 24h model.':'OFF (trial): candidates are tested but the live model is never changed.');
+ const l=s.latest,e=l.evaluation;let h='<h2>Latest run: '+esc(l.started_ist)+' IST</h2><p><b>'+esc(l.result)+'</b>'+(l.why?' - '+esc(l.why):'')+(l.error?' - '+esc(l.error):'')+'</p>';
+ if(l.data)h+='<p>Corpus: '+esc(l.data.corpus_days)+' days, '+esc(l.data.corpus_first)+' to '+esc(l.data.corpus_last)+'. New days this run: '+esc((l.data.new_days||[]).join(', ')||'none')+'.</p>';
+ if(e)h+='<p>Evaluation window '+esc(e.window)+' (candidate fitted through '+esc(e.candidate_fit_through)+'): MAE raw '+e.raw.mae+' / champion '+e.champion.mae+' / candidate '+e.candidate.mae+'; heavy hits '+e.raw.hits+' / '+e.champion.hits+' / '+e.candidate.hits+' of '+e.raw.heavy_days+'; false alarms '+e.raw.false_alarms+' / '+e.champion.false_alarms+' / '+e.candidate.false_alarms+'.</p>';
+ if(l.gates)h+='<table>'+l.gates.map(g=>'<tr><td class="'+(g.pass?'ok':'bad')+'">'+(g.pass?'pass':'FAIL')+'</td><td>'+esc(g.gate)+'</td><td>'+esc(g.detail.slice(0,120))+'</td></tr>').join('')+'</table>';
+ latest.innerHTML=h;
+ hist.innerHTML='<tr><th>Run (IST)</th><th>Result</th><th>Why</th></tr>'+s.runs.map(r=>'<tr><td>'+esc(r.started_ist)+'</td><td>'+esc(r.result)+'</td><td>'+esc((r.why||r.error||'').slice(0,160))+'</td></tr>').join('');
+}).catch(()=>{note.textContent='No nightly run has been recorded yet.'});
+</script></body></html>
