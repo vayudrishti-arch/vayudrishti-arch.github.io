@@ -1,0 +1,48 @@
+{
+ "runs": [
+  {
+   "started_ist": "2026-10-06 16:08",
+   "promotion_enabled": false,
+   "result": "error",
+   "data": {
+    "day_files": 1016,
+    "new_days": [
+     "2026-09-30"
+    ],
+    "fetch_stopped": [],
+    "last_corpus_day_before": "2026-09-29",
+    "corpus_first": "2021-03-25",
+    "corpus_last": "2026-09-30",
+    "corpus_days": 2014,
+    "gaps": []
+   },
+   "champion_source": "embedded in app/index.html (v4-lead1-extended-history+v2-leads23)",
+   "error": "ImportError('sklearn needs to be installed in order to use this module')",
+   "trace": "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/core.py\", line 751, in inner_f\n    return func(**kwargs)\n           ^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/sklearn.py\", line 2003, in __init__\n    super().__init__(objective=objective, **kwargs)\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/core.py\", line 751, in inner_f\n    return func(**kwargs)\n           ^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/sklearn.py\", line 851, in __init__\n    raise ImportError(\nImportError: sklearn needs to be installed in order to use this module\n",
+   "finished_ist": "2026-10-06 16:09"
+  }
+ ],
+ "latest": {
+  "started_ist": "2026-10-06 16:08",
+  "promotion_enabled": false,
+  "result": "error",
+  "data": {
+   "day_files": 1016,
+   "new_days": [
+    "2026-09-30"
+   ],
+   "fetch_stopped": [],
+   "last_corpus_day_before": "2026-09-29",
+   "corpus_first": "2021-03-25",
+   "corpus_last": "2026-09-30",
+   "corpus_days": 2014,
+   "gaps": []
+  },
+  "champion_source": "embedded in app/index.html (v4-lead1-extended-history+v2-leads23)",
+  "error": "ImportError('sklearn needs to be installed in order to use this module')",
+  "trace": "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/core.py\", line 751, in inner_f\n    return func(**kwargs)\n           ^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/sklearn.py\", line 2003, in __init__\n    super().__init__(objective=objective, **kwargs)\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/core.py\", line 751, in inner_f\n    return func(**kwargs)\n           ^^^^^^^^^^^^^^\n  File \"/opt/hostedtoolcache/Python/3.11.16/x64/lib/python3.11/site-packages/xgboost/sklearn.py\", line 851, in __init__\n    raise ImportError(\nImportError: sklearn needs to be installed in order to use this module\n",
+  "finished_ist": "2026-10-06 16:09"
+ },
+ "promotion_enabled": false,
+ "note": "VayuDrishti nightly learning. Research product, not an official warning service. ERA5 reference data arrives about 6 days late, so the model learns from days about 6 days old."
+}
