@@ -1,6 +1,168 @@
 {
  "runs": [
   {
+   "started_ist": "2026-10-14 05:57",
+   "promotion_enabled": false,
+   "result": "kept_current_model",
+   "data": {
+    "day_files": 1023,
+    "new_days": [
+     "2026-10-07"
+    ],
+    "fetch_stopped": [
+     [
+      "2026-10-08",
+      "<HTTPError 404: 'Not Found'>"
+     ]
+    ],
+    "last_corpus_day_before": "2026-10-06",
+    "corpus_first": "2021-03-25",
+    "corpus_last": "2026-10-07",
+    "corpus_days": 2021,
+    "gaps": []
+   },
+   "champion_source": "embedded in app/index.html (v4-lead1-extended-history+v2-leads23)",
+   "evaluation": {
+    "window": "2026-08-09 to 2026-10-07",
+    "raw": {
+     "n": 240000,
+     "mae": 4.6293,
+     "rmse": 10.8643,
+     "heavy_days": 1869,
+     "hits": 393,
+     "false_alarms": 1140
+    },
+    "champion": {
+     "n": 240000,
+     "mae": 4.1829,
+     "rmse": 9.1254,
+     "heavy_days": 1869,
+     "hits": 615,
+     "false_alarms": 1349
+    },
+    "candidate": {
+     "n": 240000,
+     "mae": 4.2117,
+     "rmse": 9.14,
+     "heavy_days": 1869,
+     "hits": 617,
+     "false_alarms": 1365
+    },
+    "unseen_sites": {
+     "raw": {
+      "n": 28200,
+      "mae": 5.0129,
+      "rmse": 11.1299,
+      "heavy_days": 165,
+      "hits": 24,
+      "false_alarms": 145
+     },
+     "champion": {
+      "n": 28200,
+      "mae": 4.2649,
+      "rmse": 8.9661,
+      "heavy_days": 165,
+      "hits": 29,
+      "false_alarms": 121
+     },
+     "candidate": {
+      "n": 28200,
+      "mae": 4.2965,
+      "rmse": 8.9742,
+      "heavy_days": 165,
+      "hits": 31,
+      "false_alarms": 121
+     }
+    },
+    "region_mae": {
+     "central": {
+      "champion": 6.7498,
+      "candidate": 6.7737
+     },
+     "east": {
+      "champion": 5.9464,
+      "candidate": 5.9904
+     },
+     "islands": {
+      "champion": 4.9142,
+      "candidate": 4.9119
+     },
+     "north": {
+      "champion": 2.3861,
+      "candidate": 2.4046
+     },
+     "northeast": {
+      "champion": 6.3492,
+      "candidate": 6.4405
+     },
+     "south": {
+      "champion": 2.7868,
+      "candidate": 2.7941
+     },
+     "west": {
+      "champion": 1.804,
+      "candidate": 1.8451
+     }
+    },
+    "candidate_fit_through": "2026-08-08"
+   },
+   "gates": [
+    {
+     "gate": "evidence: enough heavy-rain point-days in window",
+     "pass": true,
+     "detail": "1869 heavy point-days (need 300)"
+    },
+    {
+     "gate": "all-site MAE not worse than champion",
+     "pass": false,
+     "detail": "4.2117 vs 4.1829"
+    },
+    {
+     "gate": "all-site heavy-rain hits >= 98% of champion",
+     "pass": true,
+     "detail": "617 vs 615"
+    },
+    {
+     "gate": "all-site false alarms <= 102% of champion",
+     "pass": true,
+     "detail": "1365 vs 1349"
+    },
+    {
+     "gate": "unseen-site MAE not worse than champion",
+     "pass": false,
+     "detail": "4.2965 vs 4.2649"
+    },
+    {
+     "gate": "unseen-site heavy hits >= 97% of champion",
+     "pass": true,
+     "detail": "31 vs 29"
+    },
+    {
+     "gate": "unseen-site false alarms <= 102% of champion",
+     "pass": true,
+     "detail": "121 vs 121"
+    },
+    {
+     "gate": "every region MAE within 3% of champion (islands 10%)",
+     "pass": true,
+     "detail": "{\"central\": {\"champion\": 6.7498, \"candidate\": 6.7737}, \"east\": {\"champion\": 5.9464, \"candidate\": 5.9904}, \"islands\": {\"champion\": 4.9142, \"candidate\": 4.9119}, \"north\": {\"champion\": 2.3861, \"candidate\": 2.4046}, \"northeast\": {\"champion\": 6.3492, \"candidate\": 6.4405}, \"south\": {\"champion\": 2.7868, \"candidate\": 2.7941}, \"west\": {\"champion\": 1.804, \"candidate\": 1.8451}}"
+    },
+    {
+     "gate": "beats raw GFS on MAE and heavy hits",
+     "pass": true,
+     "detail": "MAE 4.2117 vs raw 4.6293, hits 617 vs 393"
+    },
+    {
+     "gate": "predictions finite and sane",
+     "pass": true,
+     "detail": "max 178.8 mm"
+    }
+   ],
+   "all_gates_pass": false,
+   "why": "all-site MAE not worse than champion (4.2117 vs 4.1829); unseen-site MAE not worse than champion (4.2965 vs 4.2649)",
+   "finished_ist": "2026-10-14 05:59"
+  },
+  {
    "started_ist": "2026-10-13 08:09",
    "promotion_enabled": false,
    "result": "kept_current_model",
@@ -1307,169 +1469,166 @@
   }
  ],
  "latest": {
-  "started_ist": "2026-10-13 08:09",
+  "started_ist": "2026-10-14 05:57",
   "promotion_enabled": false,
   "result": "kept_current_model",
   "data": {
-   "day_files": 1022,
+   "day_files": 1023,
    "new_days": [
-    "2026-10-03",
-    "2026-10-04",
-    "2026-10-05",
-    "2026-10-06"
+    "2026-10-07"
    ],
    "fetch_stopped": [
     [
-     "2026-10-07",
+     "2026-10-08",
      "<HTTPError 404: 'Not Found'>"
     ]
    ],
-   "last_corpus_day_before": "2026-10-02",
+   "last_corpus_day_before": "2026-10-06",
    "corpus_first": "2021-03-25",
-   "corpus_last": "2026-10-06",
-   "corpus_days": 2020,
+   "corpus_last": "2026-10-07",
+   "corpus_days": 2021,
    "gaps": []
   },
   "champion_source": "embedded in app/index.html (v4-lead1-extended-history+v2-leads23)",
   "evaluation": {
-   "window": "2026-08-08 to 2026-10-06",
+   "window": "2026-08-09 to 2026-10-07",
    "raw": {
     "n": 240000,
-    "mae": 4.7089,
-    "rmse": 10.9718,
-    "heavy_days": 1897,
+    "mae": 4.6293,
+    "rmse": 10.8643,
+    "heavy_days": 1869,
     "hits": 393,
-    "false_alarms": 1160
+    "false_alarms": 1140
    },
    "champion": {
     "n": 240000,
-    "mae": 4.252,
-    "rmse": 9.2074,
-    "heavy_days": 1897,
+    "mae": 4.1829,
+    "rmse": 9.1254,
+    "heavy_days": 1869,
     "hits": 615,
     "false_alarms": 1349
    },
    "candidate": {
     "n": 240000,
-    "mae": 4.2872,
-    "rmse": 9.2209,
-    "heavy_days": 1897,
-    "hits": 621,
-    "false_alarms": 1358
+    "mae": 4.2117,
+    "rmse": 9.14,
+    "heavy_days": 1869,
+    "hits": 617,
+    "false_alarms": 1365
    },
    "unseen_sites": {
     "raw": {
      "n": 28200,
-     "mae": 5.0973,
-     "rmse": 11.2255,
-     "heavy_days": 171,
+     "mae": 5.0129,
+     "rmse": 11.1299,
+     "heavy_days": 165,
      "hits": 24,
      "false_alarms": 145
     },
     "champion": {
      "n": 28200,
-     "mae": 4.324,
-     "rmse": 9.0465,
-     "heavy_days": 171,
+     "mae": 4.2649,
+     "rmse": 8.9661,
+     "heavy_days": 165,
      "hits": 29,
      "false_alarms": 121
     },
     "candidate": {
      "n": 28200,
-     "mae": 4.3622,
-     "rmse": 9.0603,
-     "heavy_days": 171,
-     "hits": 30,
-     "false_alarms": 122
+     "mae": 4.2965,
+     "rmse": 8.9742,
+     "heavy_days": 165,
+     "hits": 31,
+     "false_alarms": 121
     }
    },
    "region_mae": {
     "central": {
-     "champion": 6.879,
-     "candidate": 6.9151
+     "champion": 6.7498,
+     "candidate": 6.7737
     },
     "east": {
-     "champion": 6.0266,
-     "candidate": 6.0743
+     "champion": 5.9464,
+     "candidate": 5.9904
     },
     "islands": {
-     "champion": 4.9019,
-     "candidate": 4.9189
+     "champion": 4.9142,
+     "candidate": 4.9119
     },
     "north": {
-     "champion": 2.4331,
-     "candidate": 2.4605
+     "champion": 2.3861,
+     "candidate": 2.4046
     },
     "northeast": {
-     "champion": 6.4207,
-     "candidate": 6.5034
+     "champion": 6.3492,
+     "candidate": 6.4405
     },
     "south": {
-     "champion": 2.8275,
-     "candidate": 2.8379
+     "champion": 2.7868,
+     "candidate": 2.7941
     },
     "west": {
-     "champion": 1.8427,
-     "candidate": 1.8955
+     "champion": 1.804,
+     "candidate": 1.8451
     }
    },
-   "candidate_fit_through": "2026-08-07"
+   "candidate_fit_through": "2026-08-08"
   },
   "gates": [
    {
     "gate": "evidence: enough heavy-rain point-days in window",
     "pass": true,
-    "detail": "1897 heavy point-days (need 300)"
+    "detail": "1869 heavy point-days (need 300)"
    },
    {
     "gate": "all-site MAE not worse than champion",
     "pass": false,
-    "detail": "4.2872 vs 4.252"
+    "detail": "4.2117 vs 4.1829"
    },
    {
     "gate": "all-site heavy-rain hits >= 98% of champion",
     "pass": true,
-    "detail": "621 vs 615"
+    "detail": "617 vs 615"
    },
    {
     "gate": "all-site false alarms <= 102% of champion",
     "pass": true,
-    "detail": "1358 vs 1349"
+    "detail": "1365 vs 1349"
    },
    {
     "gate": "unseen-site MAE not worse than champion",
     "pass": false,
-    "detail": "4.3622 vs 4.324"
+    "detail": "4.2965 vs 4.2649"
    },
    {
     "gate": "unseen-site heavy hits >= 97% of champion",
     "pass": true,
-    "detail": "30 vs 29"
+    "detail": "31 vs 29"
    },
    {
     "gate": "unseen-site false alarms <= 102% of champion",
     "pass": true,
-    "detail": "122 vs 121"
+    "detail": "121 vs 121"
    },
    {
     "gate": "every region MAE within 3% of champion (islands 10%)",
     "pass": true,
-    "detail": "{\"central\": {\"champion\": 6.879, \"candidate\": 6.9151}, \"east\": {\"champion\": 6.0266, \"candidate\": 6.0743}, \"islands\": {\"champion\": 4.9019, \"candidate\": 4.9189}, \"north\": {\"champion\": 2.4331, \"candidate\": 2.4605}, \"northeast\": {\"champion\": 6.4207, \"candidate\": 6.5034}, \"south\": {\"champion\": 2.8275, \"candidate\": 2.8379}, \"west\": {\"champion\": 1.8427, \"candidate\": 1.8955}}"
+    "detail": "{\"central\": {\"champion\": 6.7498, \"candidate\": 6.7737}, \"east\": {\"champion\": 5.9464, \"candidate\": 5.9904}, \"islands\": {\"champion\": 4.9142, \"candidate\": 4.9119}, \"north\": {\"champion\": 2.3861, \"candidate\": 2.4046}, \"northeast\": {\"champion\": 6.3492, \"candidate\": 6.4405}, \"south\": {\"champion\": 2.7868, \"candidate\": 2.7941}, \"west\": {\"champion\": 1.804, \"candidate\": 1.8451}}"
    },
    {
     "gate": "beats raw GFS on MAE and heavy hits",
     "pass": true,
-    "detail": "MAE 4.2872 vs raw 4.7089, hits 621 vs 393"
+    "detail": "MAE 4.2117 vs raw 4.6293, hits 617 vs 393"
    },
    {
     "gate": "predictions finite and sane",
     "pass": true,
-    "detail": "max 177.7 mm"
+    "detail": "max 178.8 mm"
    }
   ],
   "all_gates_pass": false,
-  "why": "all-site MAE not worse than champion (4.2872 vs 4.252); unseen-site MAE not worse than champion (4.3622 vs 4.324)",
-  "finished_ist": "2026-10-13 08:13"
+  "why": "all-site MAE not worse than champion (4.2117 vs 4.1829); unseen-site MAE not worse than champion (4.2965 vs 4.2649)",
+  "finished_ist": "2026-10-14 05:59"
  },
  "promotion_enabled": false,
  "note": "VayuDrishti nightly learning. Research product, not an official warning service. ERA5 reference data arrives about 6 days late, so the model learns from days about 6 days old."
