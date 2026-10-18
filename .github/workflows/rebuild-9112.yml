@@ -22,6 +22,7 @@ jobs:
       - name: fetch rebuild bundle and create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release view data-days-9112 --repo $GITHUB_REPOSITORY || gh release create data-days-9112 --repo $GITHUB_REPOSITORY --title 'Day files 9112pt' --notes 'Corpus day files rebuilt at 9112 points (all ERA5 land cells in the operating box).'
           curl -sL -o /tmp/b.tar.gz https://github.com/user-attachments/files/33629927/2-rebuild_bundle.tar.gz
@@ -30,6 +31,7 @@ jobs:
       - name: rebuild chunk
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           cd rebuild
           N=$(python3 -c "import json;print(len(json.load(open('alld_actions.json'))))")
