@@ -24,8 +24,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view data-days-9112 --repo $GITHUB_REPOSITORY || gh release create data-days-9112 --repo $GITHUB_REPOSITORY --title 'Day files 9112pt' --notes 'Corpus day files rebuilt at 9112 points.'
-          gh release view data-days-9112-r2 --repo $GITHUB_REPOSITORY || gh release create data-days-9112-r2 --repo $GITHUB_REPOSITORY --title 'Day files 9112pt r2' --notes 'Remnant day files (chunk tars plus recent individual days) after the 1000-asset cap on data-days-9112.'
+          gh release view data-days-9112 --repo $GITHUB_REPOSITORY || gh release create data-days-9112 --repo $GITHUB_REPOSITORY --title 'Day files 9112pt' --notes 'Corpus day files rebuilt at 9112 points.' || gh release view data-days-9112 --repo $GITHUB_REPOSITORY
+          gh release view data-days-9112-r2 --repo $GITHUB_REPOSITORY || gh release create data-days-9112-r2 --repo $GITHUB_REPOSITORY --title 'Day files 9112pt r2' --notes 'Remnant day files (chunk tars plus recent individual days) after the 1000-asset cap on data-days-9112.' || gh release view data-days-9112-r2 --repo $GITHUB_REPOSITORY
           curl -sL -o /tmp/b.tar.gz https://github.com/user-attachments/files/33634084/1-rebuild_bundle2.tar.gz
           mkdir -p rebuild && tar xzf /tmp/b.tar.gz -C rebuild
           ls -la rebuild
