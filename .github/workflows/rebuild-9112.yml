@@ -1,0 +1,41 @@
+name: rebuild-9112
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'optional note'
+        default: ''
+permissions:
+  contents: write
+concurrency:
+  group: rebuild-9112-${{ github.run_id }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+    steps:
+      - run: pip install numpy eccodes
+      - name: fetch rebuild bundle and create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view data-days-9112 --repo $GITHUB_REPOSITORY || gh release create data-days-9112 --repo $GITHUB_REPOSITORY --title 'Day files 9112pt' --notes 'Corpus day files rebuilt at 9112 points (all ERA5 land cells in the operating box).'
+          curl -sL -o /tmp/b.tar.gz https://github.com/user-attachments/files/33629927/2-rebuild_bundle.tar.gz
+          mkdir -p rebuild && tar xzf /tmp/b.tar.gz -C rebuild
+          ls -la rebuild
+      - name: rebuild chunk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd rebuild
+          N=$(python3 -c "import json;print(len(json.load(open('alld_actions.json'))))")
+          CH=16
+          PER=$(( (N + CH - 1) / CH ))
+          S=$(( ${{ matrix.chunk }} * PER ))
+          E=$(( S + PER )); if [ $E -gt $N ]; then E=$N; fi
+          echo "chunk ${{ matrix.chunk }}: days $S..$E of $N"
+          VD_POINTS=points9112.json VD_CELLS=cells9112.json python3 rebuild_chunk.py alld_actions.json $S $E /tmp/out data-days-9112
