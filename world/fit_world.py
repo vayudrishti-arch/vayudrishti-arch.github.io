@@ -70,6 +70,11 @@ def main_chunk(d): return None if d=='2021-03-24' else full_days.index(d)//32
 sub=np.zeros(1000000,bool);sub[::FIT_POINT_STRIDE]=True
 nsub=int(sub.sum())
 FL=[];RL=[];TL=[]
+FLC=[];RLC=[];TLC=[]
+fit_days_sorted=sorted(fit_days)
+n_cal=max(8,len(fit_days_sorted)//8)
+cal_set=set(fit_days_sorted[-n_cal:])
+log('fit days',len(fit_days_sorted),'cal days',n_cal)
 t0=time.time()
 def eat_npz(b,date,dstore):
     z=zipfile.ZipFile(io.BytesIO(b))
@@ -107,14 +112,18 @@ for d in sorted(fit_days):
     elif d in ext_days and len(ext_days[d][1])==1000000:
         F,RR,T=ext_days[d]  # chunk-128 full-grid day
     else:continue
-    FL.append(F[sub]);RL.append(RR[sub]);TL.append(T[sub])
+    if d in cal_set:FLC.append(F[sub]);RLC.append(RR[sub]);TLC.append(T[sub])
+    else:FL.append(F[sub]);RL.append(RR[sub]);TL.append(T[sub])
     del F,RR,T
     if d in main_days:del main_days[d]
     if d in ext_days:del ext_days[d]
-    if len(FL)%20==0:gc.collect();log('fit buf days',len(FL),'elapsed',int(time.time()-t0),'s')
-F=np.concatenate(FL);RR=np.concatenate(RL);T=np.concatenate(TL);del FL,RL,TL;gc.collect()
-G=np.tile(reg_of[sub],len(fit_days));E=np.tile(elig[sub],len(fit_days))
-log('fit matrix',F.shape,'elapsed',int(time.time()-t0),'s')
+    if (len(FL)+len(FLC))%20==0:gc.collect();log('fit buf days',len(FL)+len(FLC),'elapsed',int(time.time()-t0),'s')
+F=np.concatenate(FL);RR=np.concatenate(RL);T=np.concatenate(TL);del FL,RL,TL
+G=np.tile(reg_of[sub],len(RR)//nsub);E=np.tile(elig[sub],len(RR)//nsub)
+Fc=np.concatenate(FLC);RRc=np.concatenate(RLC);Tc=np.concatenate(TLC);del FLC,RLC,TLC
+Gc=np.tile(reg_of[sub],len(RRc)//nsub);Ec=np.tile(elig[sub],len(RRc)//nsub)
+gc.collect()
+log('train matrix',F.shape,'cal matrix',Fc.shape,'elapsed',int(time.time()-t0),'s')
 from xgboost import XGBRegressor,XGBClassifier
 def build_X(F,RR,G,qm):
     QM=np.zeros(len(RR),np.float32)
@@ -134,21 +143,61 @@ def fit_model(F,RR,T,G,qm_days_mask=None):
     reg=XGBRegressor(n_estimators=200,max_depth=4,learning_rate=.04,reg_lambda=50,min_child_weight=20,subsample=.85,colsample_bytree=.9,n_jobs=4,random_state=42,tree_method='hist').fit(X,(T[wet]-QM))
     yh=(T[wet]>=HEAVY).astype(int)
     clf=XGBClassifier(n_estimators=250,max_depth=4,learning_rate=.05,min_child_weight=5,subsample=.85,colsample_bytree=.9,scale_pos_weight=min(50,(len(yh)-yh.sum())/max(1,yh.sum()))**.5,n_jobs=4,random_state=42,tree_method='hist',eval_metric='logloss').fit(X,yh)
-    # threshold: max F1 on a pre-window subsample (pre-window choice, no window tuning)
-    idx=np.random.RandomState(42).choice(len(X),min(2000000,len(X)),replace=False)
-    pr=clf.predict_proba(X[idx])[:,1];yh_s=yh[idx]
-    best=(0,0.5)
-    for th in np.linspace(0.05,0.95,37):
-        p=pr>=th;tp=int((p&(yh_s==1)).sum());fp=int((p&(yh_s==0)).sum());fn=int(((~p)&(yh_s==1)).sum())
-        f1=2*tp/(2*tp+fp+fn) if tp else 0
-        if f1>best[0]:best=(f1,float(th))
-    log('threshold calib F1',best)
-    return reg,clf,qm,best[1]
+    return reg,clf,qm
 F=F[E];RR=RR[E];T=T[E];G=G[E];del E;gc.collect()
-log('fit matrix after cell-holdout filter',F.shape)
-reg,clf,qm,TH=fit_model(F,RR,T,G)
+log('train matrix after cell-holdout filter',F.shape)
+reg,clf,qm=fit_model(F,RR,T,G)
 del F,RR,T,G;gc.collect()
-log('model fitted, TH',TH,'elapsed',int(time.time()-t0),'s')
+log('model fitted (train days)','elapsed',int(time.time()-t0),'s')
+# --- pre-window calibration on the last n_cal fit days (never the eval window):
+# per-region affine MAE correction (L2, clipped) + per-region heavy thresholds
+# (max calibration hits subject to false alarms <= 102% of raw GFS on calibration rows) ---
+Fc=Fc[Ec];RRc=RRc[Ec];Tc=Tc[Ec];Gc=Gc[Ec];del Ec;gc.collect()
+wetc=RRc>0
+Gw=Gc[wetc];Tw=Tc[wetc];Rw=RRc[wetc]
+Xc,QMc=build_X(Fc[wetc],Rw,Gw,qm)
+del Fc,RRc,Tc,Gc;gc.collect()
+p0=np.maximum(0,QMc+reg.predict(Xc).astype(np.float32))
+prc=clf.predict_proba(Xc)[:,1]
+del Xc,QMc;gc.collect()
+heavy_t=Tw>=HEAVY
+a_arr=np.ones(len(REGIONS),np.float32);b_arr=np.zeros(len(REGIONS),np.float32)
+MINCAL_AFF=500
+for gi in range(len(REGIONS)):
+    m=Gw==gi
+    if int(m.sum())<MINCAL_AFF:continue
+    A=np.column_stack([p0[m],np.ones(int(m.sum()),np.float32)])
+    sol,_,_,_=np.linalg.lstsq(A,Tw[m],rcond=None)
+    a_arr[gi]=float(np.clip(sol[0],0.8,1.2));b_arr[gi]=float(np.clip(sol[1],-2.0,2.0))
+p1=np.maximum(0,a_arr[Gw]*p0+b_arr[Gw]);del p0;gc.collect()
+THS=np.linspace(0.05,1.0,39)
+def best_th(m):
+    raw_fa=int(((Rw[m]>=HEAVY)&(~heavy_t[m])).sum());cap=1.02*raw_fa
+    p1m=p1[m];prm=prc[m];htm=heavy_t[m]
+    best=(-1,1.0)
+    for th in THS:
+        ph=(p1m>=HEAVY)|(prm>=th)
+        fa=int((ph&~htm).sum())
+        if fa<=cap:
+            h=int((ph&htm).sum())
+            if h>best[0]:best=(h,float(th))
+    return best[0],best[1],raw_fa
+hg,THG,rfa_g=best_th(np.ones(len(Gw),bool))
+thr_arr=np.full(len(REGIONS),THG,np.float32)
+calrep={'global':{'th':float(THG),'cal_hits':hg,'cal_raw_fa':rfa_g}}
+MINCAL_TH=5000
+for gi,r in enumerate(REGIONS):
+    m=Gw==gi
+    if int(m.sum())<MINCAL_TH:
+        calrep[r]={'th':float(THG),'fallback':'global','cal_rows':int(m.sum())}
+        continue
+    h,th,rfa=best_th(m)
+    thr_arr[gi]=th
+    calrep[r]={'th':th,'cal_hits':h,'cal_raw_fa':rfa,'affine':[float(a_arr[gi]),float(b_arr[gi])]}
+log('calibration',json.dumps(calrep)[:1500])
+del Gw,Tw,Rw,p1,prc,heavy_t;gc.collect()
+TH=float(THG)
+log('calibrated, elapsed',int(time.time()-t0),'s')
 # pass 2: eval window day-by-day (full 1M)
 win_days=built_days[-EVAL_DAYS:]
 need={}
@@ -177,9 +226,11 @@ for d in win_days:
     del ev_main[d];del ev_ext[d]
     wet=RR>0
     X,QM=build_X(F[wet],RR[wet],reg_of[wet],qm)
+    Gw_=reg_of[wet]
     p0=np.maximum(0,QM+reg.predict(X).astype(np.float32))
+    p1=np.maximum(0,a_arr[Gw_]*p0+b_arr[Gw_])
     pr=clf.predict_proba(X)[:,1]
-    pw=np.where(pr>=TH,np.maximum(p0,HEAVY),p0)
+    pw=np.where(pr>=thr_arr[Gw_],np.maximum(p1,HEAVY),p1)
     p=np.zeros(len(RR),np.float32);p[wet]=pw
     if not np.isfinite(p).all():finite_ok=False
     pkmax=max(pkmax,float(p.max()))
@@ -207,7 +258,7 @@ for gi,rn in enumerate(REGIONS):
     ok=(cm_<=1.03*rm_) if rm_>=0.05 else (cm_<=rm_+0.02)
     gate(f'per-region MAE within 3% of raw GFS: {rn}',bool(ok),f'candidate {cm_} vs raw {rm_}')
 gate('predictions finite and sane',bool(finite_ok and pkmax<2000),f"max {pkmax:.1f} mm")
-out={'regions':REGIONS,'evaluation':{'window':f"{win_days[0]} to {win_days[-1]}",'raw':raw,'candidate':mk,'unseen_sites':hold_m,'per_region':regm},'gates':gates,'all_gates_pass':all(g['pass'] for g in gates),'fit':{'days':len(fit_days),'day_stride':FIT_DAY_STRIDE,'point_stride':FIT_POINT_STRIDE,'fit_through':win_start,'threshold':TH,'holdout':'cell-level: whole ERA5 (rowE,colE) cells held out via crc32%8==7; ~12.5% of cells, no sibling leak'},'note':'First worldwide fit; champion baseline = raw GFS. Extra 0.125-deg points share 0.25-deg ERA5 truth cells (not independently verified). antarctica region: precip almost all snow, rain target ~always 0, climatologically quiet.'}
+out={'regions':REGIONS,'evaluation':{'window':f"{win_days[0]} to {win_days[-1]}",'raw':raw,'candidate':mk,'unseen_sites':hold_m,'per_region':regm},'gates':gates,'all_gates_pass':all(g['pass'] for g in gates),'fit':{'days':len(fit_days),'train_days':len(fit_days)-n_cal,'cal_days':n_cal,'day_stride':FIT_DAY_STRIDE,'point_stride':FIT_POINT_STRIDE,'fit_through':win_start,'threshold':TH,'th_regions':{REGIONS[gi]:float(thr_arr[gi]) for gi in range(len(REGIONS))},'affine':{REGIONS[gi]:[float(a_arr[gi]),float(b_arr[gi])] for gi in range(len(REGIONS))},'holdout':'cell-level: whole ERA5 (rowE,colE) cells held out via crc32%8==7; ~12.5% of cells, no sibling leak','calibration':'pre-window internal split: QM/trees fit on first train_days of the fit period; per-region affine (L2, clipped to a in [0.8,1.2], b in [-2,2]mm) and per-region heavy thresholds (max calibration hits s.t. calibration FA<=102% of raw GFS) fit on the last cal_days of the fit period; eval window never touched'},'note':'First worldwide fit; champion baseline = raw GFS. Extra 0.125-deg points share 0.25-deg ERA5 truth cells (not independently verified). antarctica region: precip almost all snow, rain target ~always 0, climatologically quiet.'}
 json.dump(out,open(f'{W}/world-fit-metrics.json','w'),indent=1)
 log(json.dumps(out['evaluation'],indent=1)[:2000])
 log('GATES',json.dumps(gates,indent=1)[:1500])
@@ -217,7 +268,7 @@ def tr(mod):
     j=json.loads(mod.get_booster().save_raw('json'))
     return bs,[{k:t[k] for k in ['left_children','right_children','split_indices','split_conditions','default_left']} for t in j['learner']['gradient_booster']['model']['trees']]
 bs,rt=tr(reg);cb,ct=tr(clf)
-model={'lead':1,'weight':1.0,'regions':REGIONS,'qm':qm,'base':bs,'trees':rt,'clf':{'base':math.log(cb/(1-cb)),'trees':ct,'threshold':TH},'fit_through':win_start,'version':'world-v1-'+win_days[-1]}
+model={'lead':1,'weight':1.0,'regions':REGIONS,'qm':qm,'base':bs,'trees':rt,'clf':{'base':math.log(cb/(1-cb)),'trees':ct,'threshold':TH,'th_regions':{REGIONS[gi]:float(thr_arr[gi]) for gi in range(len(REGIONS))}},'affine':{REGIONS[gi]:[float(a_arr[gi]),float(b_arr[gi])] for gi in range(len(REGIONS))},'fit_through':win_start,'version':'world-v2-'+win_days[-1]}
 json.dump(model,open(f'{W}/world-lead1-model.json','w'),separators=(',',':'))
 reg.save_model(f'{W}/world-reg.json');clf.save_model(f'{W}/world-clf.json')
 if os.environ.get('VD_UPLOAD','1')=='1':
