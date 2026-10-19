@@ -12,12 +12,22 @@ FIT_DAY_STRIDE=16;FIT_POINT_STRIDE=4
 def log(*a):print(*a,flush=True)
 def dl(url,path):
     if os.path.exists(path):return
-    with urllib.request.urlopen(url,timeout=600) as r,open(path+'.part','wb') as f:
-        while True:
-            b=r.read(1<<24)
-            if not b:break
-            f.write(b)
-    os.replace(path+'.part',path)
+    import time
+    for att in range(8):
+        try:
+            with urllib.request.urlopen(url,timeout=600) as r,open(path+'.part','wb') as f:
+                while True:
+                    b=r.read(1<<24)
+                    if not b:break
+                    f.write(b)
+            os.replace(path+'.part',path)
+            return
+        except Exception as e:
+            log('dl retry',att,path.split('/')[-1],repr(e)[:120])
+            try:os.remove(path+'.part')
+            except OSError:pass
+            time.sleep(10*(att+1))
+    raise RuntimeError('dl failed after retries: '+path)
 log('loading release index')
 import re
 def ghapi(u):
