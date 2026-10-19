@@ -233,7 +233,7 @@ calrep={'safety_factor':s_star,'cal_check_days':5,'global':{'th':float(tg)}}
 for gi,r in enumerate(REGIONS):
     m=Gw==gi
     if s_star>0 and int(m.sum())>=MINCAL_TH:
-        h,th,rfa=sweep_th(m,s_star)
+        h,th=sweep_th(m,s_star)
         thr_arr[gi]=th
     calrep[r]={'th':float(thr_arr[gi]),'affine':[float(a_arr[gi]),float(b_arr[gi])],'affine_accepted':bool(acc_aff.get(r,False))}
 log('calibration',json.dumps(calrep)[:1500])
