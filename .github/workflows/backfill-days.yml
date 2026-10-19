@@ -1,0 +1,32 @@
+name: backfill-days
+on:
+  workflow_dispatch:
+    inputs:
+      chunks:
+        description: 'space-separated chunk ids whose .done markers to delete and rebuild (e.g. "63 127")'
+        required: true
+permissions:
+  contents: write
+  actions: write
+jobs:
+  delete-and-redispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: delete done markers and re-dispatch rebuild workflows
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -e
+          for c in ${{ github.event.inputs.chunks }}; do
+            echo "deleting marker chunk-$c.done"
+            gh release delete-asset data-days-world "chunk-$c.done" --yes || true
+          done
+          sleep 5
+          gh release view data-days-world --json files -q '.files[].name' | grep -E '^chunk-(63|127)\.done$' || echo 'markers confirmed gone'
+          need_main=0; need_ext=0
+          for c in ${{ github.event.inputs.chunks }}; do
+            if [ "$c" -lt 64 ]; then need_main=1; else need_ext=1; fi
+          done
+          if [ "$need_main" = 1 ]; then gh workflow run rebuild-world.yml; echo 'dispatched rebuild-world'; fi
+          if [ "$need_ext" = 1 ]; then gh workflow run rebuild-world-ext.yml; echo 'dispatched rebuild-world-ext'; fi
