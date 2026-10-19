@@ -43,7 +43,18 @@ REGIONS=sorted(set(p['region'] for p in pts))
 log('regions:',REGIONS)
 ridx={r:i for i,r in enumerate(REGIONS)}
 reg_of=np.array([ridx[p['region']] for p in pts],np.int8)
-elig=np.array([bool(p['fit_eligible']) for p in pts])
+# holdout must be cell-level: sibling points share one 0.25-deg ERA5 truth cell,
+# so a point-level split leaks truth cells across fit/holdout. Whole-cell split.
+dl(wurls['cellsw1m.json.gz'],f'{W}/cellsw1m.json.gz')
+cellsj=json.load(gz.open(f'{W}/cellsw1m.json.gz'))
+import zlib
+cid=np.array([r*1440+c for r,c in zip(cellsj['rowE'],cellsj['colE'])],np.int64)
+del cellsj;gc.collect()
+uc=np.unique(cid)
+hold_cells=set(int(c) for c in uc if zlib.crc32(int(c).to_bytes(8,'little'))%8==7)
+elig=np.array([int(c) not in hold_cells for c in cid],bool)
+log('cell-level holdout: cells',len(uc),'held',len(hold_cells),'pts held',int((~elig).sum()))
+del cid,uc;gc.collect()
 del pts;gc.collect()
 alld=json.load(urllib.request.urlopen(wurls['alld_world.json'],timeout=60))
 LAGGED={'2026-10-10','2026-10-11','2026-10-13'}
@@ -133,6 +144,8 @@ def fit_model(F,RR,T,G,qm_days_mask=None):
         if f1>best[0]:best=(f1,float(th))
     log('threshold calib F1',best)
     return reg,clf,qm,best[1]
+F=F[E];RR=RR[E];T=T[E];G=G[E];del E;gc.collect()
+log('fit matrix after cell-holdout filter',F.shape)
 reg,clf,qm,TH=fit_model(F,RR,T,G)
 del F,RR,T,G;gc.collect()
 log('model fitted, TH',TH,'elapsed',int(time.time()-t0),'s')
@@ -189,8 +202,12 @@ gate('all-site false alarms <= 102% of raw GFS',mk['false_alarms']<=1.02*raw['fa
 gate('unseen-site MAE better than raw GFS',hold_m['cand']['mae']<hold_m['raw']['mae'],f"{hold_m['cand']['mae']} vs raw {hold_m['raw']['mae']}")
 gate('unseen-site heavy hits >= 97% of raw GFS',hold_m['cand']['hits']>=0.97*hold_m['raw']['hits'],f"{hold_m['cand']['hits']} vs raw {hold_m['raw']['hits']}")
 gate('unseen-site false alarms <= 102% of raw GFS',hold_m['cand']['false_alarms']<=1.02*hold_m['raw']['false_alarms'],f"{hold_m['cand']['false_alarms']} vs raw {hold_m['raw']['false_alarms']}")
+for gi,rn in enumerate(REGIONS):
+    rm_=regm[rn]['raw']['mae'];cm_=regm[rn]['candidate']['mae']
+    ok=(cm_<=1.03*rm_) if rm_>=0.05 else (cm_<=rm_+0.02)
+    gate(f'per-region MAE within 3% of raw GFS: {rn}',bool(ok),f'candidate {cm_} vs raw {rm_}')
 gate('predictions finite and sane',bool(finite_ok and pkmax<2000),f"max {pkmax:.1f} mm")
-out={'regions':REGIONS,'evaluation':{'window':f"{win_days[0]} to {win_days[-1]}",'raw':raw,'candidate':mk,'unseen_sites':hold_m,'per_region':regm},'gates':gates,'all_gates_pass':all(g['pass'] for g in gates),'fit':{'days':len(fit_days),'day_stride':FIT_DAY_STRIDE,'point_stride':FIT_POINT_STRIDE,'fit_through':win_start,'threshold':TH},'note':'First worldwide fit; champion baseline = raw GFS. Extra 0.125-deg points share 0.25-deg ERA5 truth cells (not independently verified). antarctica region: precip almost all snow, rain target ~always 0, climatologically quiet.'}
+out={'regions':REGIONS,'evaluation':{'window':f"{win_days[0]} to {win_days[-1]}",'raw':raw,'candidate':mk,'unseen_sites':hold_m,'per_region':regm},'gates':gates,'all_gates_pass':all(g['pass'] for g in gates),'fit':{'days':len(fit_days),'day_stride':FIT_DAY_STRIDE,'point_stride':FIT_POINT_STRIDE,'fit_through':win_start,'threshold':TH,'holdout':'cell-level: whole ERA5 (rowE,colE) cells held out via crc32%8==7; ~12.5% of cells, no sibling leak'},'note':'First worldwide fit; champion baseline = raw GFS. Extra 0.125-deg points share 0.25-deg ERA5 truth cells (not independently verified). antarctica region: precip almost all snow, rain target ~always 0, climatologically quiet.'}
 json.dump(out,open(f'{W}/world-fit-metrics.json','w'),indent=1)
 log(json.dumps(out['evaluation'],indent=1)[:2000])
 log('GATES',json.dumps(gates,indent=1)[:1500])
