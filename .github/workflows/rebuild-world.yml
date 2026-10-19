@@ -24,7 +24,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view data-days-world --repo $GITHUB_REPOSITORY || gh release create data-days-world --repo $GITHUB_REPOSITORY --title 'Worldwide day files' --notes '0.125-deg worldwide corpus chunk tars. Chunk N done marker: chunk-N.done.'
+          gh release view data-days-world --repo $GITHUB_REPOSITORY || gh release create data-days-world --repo $GITHUB_REPOSITORY --title 'Worldwide day files' --notes '0.125-deg worldwide corpus chunk tars. Chunk N done marker: chunk-N.done.' || gh release view data-days-world --repo $GITHUB_REPOSITORY
           mkdir -p wa && cd wa
           for f in pointsw.json.gz cellsw.json.gz alld_world.json vdlibw.py gfs013_lats.json rebuild_chunkw.py; do
             gh release download world-assets --repo $GITHUB_REPOSITORY --pattern "$f" --clobber --dir . || true
