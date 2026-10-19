@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 340
     steps:
+      - uses: actions/checkout@v4
       - run: pip install numpy xgboost scikit-learn
       - name: worldwide fit + gates
         env:
