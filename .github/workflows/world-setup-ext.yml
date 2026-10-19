@@ -1,0 +1,23 @@
+name: world-setup-ext
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy eccodes
+      - name: build 1M extension grid and upload new assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for f in pointsw.json.gz cellsw.json.gz gfs013_lats.json; do
+            gh release download world-assets --repo $GITHUB_REPOSITORY --pattern "$f" --clobber --dir .
+          done
+          gunzip -f pointsw.json.gz cellsw.json.gz
+          python3 world/gridext_actions.py
+          gh release upload world-assets pointsw_ext.json.gz cellsw_ext.json.gz pointsw1m.json.gz cellsw1m.json.gz --clobber --repo $GITHUB_REPOSITORY
+          echo UPLOADED
