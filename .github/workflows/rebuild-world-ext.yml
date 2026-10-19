@@ -1,0 +1,48 @@
+name: rebuild-world-ext
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        description: 'optional note'
+        default: ''
+permissions:
+  contents: write
+concurrency:
+  group: rebuild-world-ext-${{ github.run_id }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: [64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127]
+    steps:
+      - run: pip install numpy eccodes numcodecs
+      - name: fetch ext world assets and create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view data-days-world --repo $GITHUB_REPOSITORY || gh release create data-days-world --repo $GITHUB_REPOSITORY --title 'Worldwide day files' --notes '0.125-deg worldwide corpus chunk tars. Chunk N done marker: chunk-N.done.' || gh release view data-days-world --repo $GITHUB_REPOSITORY
+          mkdir -p wa && cd wa
+          for f in pointsw_ext.json.gz cellsw_ext.json.gz alld_world.json vdlibw.py gfs013_lats.json rebuild_chunkw.py; do
+            gh release download world-assets --repo $GITHUB_REPOSITORY --pattern "$f" --clobber --dir . || true
+          done
+          gunzip -f pointsw_ext.json.gz cellsw_ext.json.gz
+          ls -la
+      - name: rebuild ext chunk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd wa
+          N=$(python3 -c "import json;print(len(json.load(open('alld_world.json'))))")
+          CH=64
+          PER=$(( (N + CH - 1) / CH ))
+          C=$(( ${{ matrix.chunk }} - 64 ))
+          S=$(( C * PER ))
+          E=$(( S + PER )); if [ $E -gt $N ]; then E=$N; fi
+          if gh release view data-days-world --repo $GITHUB_REPOSITORY --json files -q '.files[].name' | grep -qx 'chunk-${{ matrix.chunk }}.done'; then
+            echo "chunk ${{ matrix.chunk }} already done, skipping"; exit 0
+          fi
+          echo "ext chunk ${{ matrix.chunk }}: days $S..$E of $N"
+          VD_POINTS=pointsw_ext.json VD_CELLS=cellsw_ext.json python3 rebuild_chunkw.py alld_world.json $S $E /tmp/out data-days-world ${{ matrix.chunk }}
