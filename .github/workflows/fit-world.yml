@@ -1,0 +1,15 @@
+name: fit-world
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - run: pip install numpy xgboost scikit-learn
+      - name: worldwide fit + gates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 world/fit_world.py
