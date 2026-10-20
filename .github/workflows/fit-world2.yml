@@ -1,0 +1,16 @@
+name: fit-world2
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy xgboost scikit-learn
+      - name: worldwide second-stage fit + gates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 world/fit_world2.py
