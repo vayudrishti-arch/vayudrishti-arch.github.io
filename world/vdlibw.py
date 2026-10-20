@@ -55,8 +55,8 @@ def step_job(date,hour,lead=1):
             if prefix.startswith('MSLET:'):v/=np.float32(100)
             arrays[FIELDS[(NEED[0]+NEED[1]).index(prefix)]]=v
     return hour,arrays,nb
-def fetch_gfs_day(date,pool):
-    res=list(pool.map(lambda h:step_job(date,h),range(24)))
+def fetch_gfs_day(date,pool,lead=1):
+    res=list(pool.map(lambda h:step_job(date,h,lead),range(24)))
     return {k:np.stack([r[1][k] for r in sorted(res,key=lambda r:r[0])]) for k in FIELDS},sum(r[2] for r in res)
 _meta=None
 def era_meta():
