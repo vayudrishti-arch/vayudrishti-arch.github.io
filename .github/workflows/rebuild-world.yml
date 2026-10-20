@@ -43,7 +43,7 @@ jobs:
           PER=$(( (N + CH - 1) / CH ))
           S=$(( ${{ matrix.chunk }} * PER ))
           E=$(( S + PER )); if [ $E -gt $N ]; then E=$N; fi
-          if gh release view data-days-world --repo $GITHUB_REPOSITORY --json files -q '.files[].name' | grep -qx 'chunk-${{ matrix.chunk }}.done'; then
+          if gh api "repos/$GH_REPO/releases/tags/data-days-world" --jq '.assets[].name' | grep -qx 'chunk-${{ matrix.chunk }}.done'; then
             echo "chunk ${{ matrix.chunk }} already done, skipping"; exit 0
           fi
           echo "chunk ${{ matrix.chunk }}: days $S..$E of $N"
