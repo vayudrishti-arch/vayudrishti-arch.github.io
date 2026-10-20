@@ -1,0 +1,19 @@
+name: fit-world-l3-v2
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy xgboost scikit-learn
+      - name: worldwide lead-3 fit v2 (per-region abstention) + gates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VD_LEAD: '3'
+          VD_TAG: data-days-world-l3
+          VD_OUT: world-fit-l3-v2
+        run: python3 world/fit_worldl.py
