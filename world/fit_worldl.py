@@ -190,6 +190,16 @@ for gi,r in enumerate(REGIONS):
     if mae1<mae0:a_arr[gi]=a;b_arr[gi]=b;acc_aff[r]=True
     else:acc_aff[r]=False
 p1o=np.maximum(0,a_arr[G]*p0o+b_arr[G]);del p0o;gc.collect()
+# per-region abstention: where the full correction (QM+trees+affine) does not beat raw GFS
+# on pooled out-of-fold, the model abstains and serves raw GFS there. Pre-window choice,
+# same honesty rule as the affine gate; disclosed in metrics and exported in the model.
+abstain=np.zeros(len(REGIONS),bool)
+for gi,r in enumerate(REGIONS):
+    m=G==gi
+    if int(m.sum())<5000:continue
+    mae_c=float(abs(T[m]-p1o[m]).mean());mae_r=float(abs(T[m]-RR[m]).mean())
+    if mae_c>=mae_r:abstain[gi]=True
+log('abstain regions (correction does not beat raw GFS out-of-fold):',[REGIONS[gi] for gi in range(len(REGIONS)) if abstain[gi]])
 # heavy thresholds on pooled out-of-fold, WET ROWS ONLY (RR>0), matching live/eval
 # inference (v4 selected over all rows; fixed and disclosed). Cap = the gate itself.
 heavy_t=T>=HEAVY
@@ -255,6 +265,7 @@ for d in win_days:
     p1=np.maximum(0,a_arr[Gw_]*p0+b_arr[Gw_])
     pr=clf.predict_proba(X)[:,1]
     pw=np.where(pr>=thr_arr[Gw_],np.maximum(p1,HEAVY),p1)
+    pw=np.where(abstain[Gw_],RR[wet],pw)   # abstained regions serve raw GFS (amount and flag)
     p=np.zeros(len(RR),np.float32);p[wet]=pw
     if not np.isfinite(p).all():finite_ok=False
     pkmax=max(pkmax,float(p.max()))
@@ -282,7 +293,7 @@ for gi,rn in enumerate(REGIONS):
     ok=(cm_<=1.03*rm_) if rm_>=0.05 else (cm_<=rm_+0.02)
     gate(f'per-region MAE within 3% of raw GFS: {rn}',bool(ok),f'candidate {cm_} vs raw {rm_}')
 gate('predictions finite and sane',bool(finite_ok and pkmax<2000),f"max {pkmax:.1f} mm")
-out={'regions':REGIONS,'evaluation':{'window':f"{win_days[0]} to {win_days[-1]} (pinned to world-v4)",'raw':raw,'candidate':mk,'unseen_sites':hold_m,'per_region':regm},'gates':gates,'all_gates_pass':all(g['pass'] for g in gates),'fit':{'days':n_days_used,'days_skipped':skipped,'folds':5,'day_stride':FIT_DAY_STRIDE,'point_stride':FIT_POINT_STRIDE,'fit_through':win_start,'threshold':TH,'th_regions':{REGIONS[gi]:float(thr_arr[gi]) for gi in range(len(REGIONS))},'affine':{REGIONS[gi]:[float(a_arr[gi]),float(b_arr[gi])] for gi in range(len(REGIONS))},'holdout':'cell-level: whole ERA5 (rowE,colE) cells held out via crc32%8==7; ~12.5% of cells, no sibling leak','calibration':'pre-window out-of-fold: 5 interleaved day folds over the fit period; QM/trees refit per fold on the other 4; affine kept per region only if pooled out-of-fold MAE improves; per-region heavy thresholds = max out-of-fold hits s.t. out-of-fold FA<=102% of raw GFS (the gate rule itself, on honest pre-window estimates), counted on WET ROWS ONLY (v4 counted all rows; fixed and disclosed); eval window never touched for any choice'},'note':f'Worldwide lead-{LEAD} fit; champion baseline = raw GFS. Extra 0.125-deg points share 0.25-deg ERA5 truth cells (not independently verified). antarctica region: precip almost all snow, rain target ~always 0, climatologically quiet.'}
+out={'regions':REGIONS,'evaluation':{'window':f"{win_days[0]} to {win_days[-1]} (pinned to world-v4)",'raw':raw,'candidate':mk,'unseen_sites':hold_m,'per_region':regm},'gates':gates,'all_gates_pass':all(g['pass'] for g in gates),'fit':{'days':n_days_used,'days_skipped':skipped,'folds':5,'day_stride':FIT_DAY_STRIDE,'point_stride':FIT_POINT_STRIDE,'fit_through':win_start,'threshold':TH,'th_regions':{REGIONS[gi]:float(thr_arr[gi]) for gi in range(len(REGIONS))},'affine':{REGIONS[gi]:[float(a_arr[gi]),float(b_arr[gi])] for gi in range(len(REGIONS))},'holdout':'cell-level: whole ERA5 (rowE,colE) cells held out via crc32%8==7; ~12.5% of cells, no sibling leak','abstain_regions':[REGIONS[gi] for gi in range(len(REGIONS)) if abstain[gi]],'calibration':'pre-window out-of-fold: 5 interleaved day folds over the fit period; QM/trees refit per fold on the other 4; affine kept per region only if pooled out-of-fold MAE improves; per-region abstention: where the full correction does not beat raw GFS on pooled out-of-fold, the model serves raw GFS there (pre-window choice); per-region heavy thresholds = max out-of-fold hits s.t. out-of-fold FA<=102% of raw GFS (the gate rule itself, on honest pre-window estimates), counted on WET ROWS ONLY (v4 counted all rows; fixed and disclosed); eval window never touched for any choice'},'note':f'Worldwide lead-{LEAD} fit; champion baseline = raw GFS. Extra 0.125-deg points share 0.25-deg ERA5 truth cells (not independently verified). antarctica region: precip almost all snow, rain target ~always 0, climatologically quiet.'}
 json.dump(out,open(f'{W}/metrics.json','w'),indent=1)
 log(json.dumps(out['evaluation'],indent=1)[:2000])
 log('GATES',json.dumps(gates,indent=1)[:1500])
@@ -292,7 +303,7 @@ def tr(mod):
     j=json.loads(mod.get_booster().save_raw('json'))
     return bs,[{k:t[k] for k in ['left_children','right_children','split_indices','split_conditions','default_left']} for t in j['learner']['gradient_booster']['model']['trees']]
 bs,rt=tr(reg);cb,ct=tr(clf)
-model={'lead':LEAD,'weight':1.0,'regions':REGIONS,'qm':qm,'base':bs,'trees':rt,'clf':{'base':math.log(cb/(1-cb)),'trees':ct,'threshold':TH,'th_regions':{REGIONS[gi]:float(thr_arr[gi]) for gi in range(len(REGIONS))}},'affine':{REGIONS[gi]:[float(a_arr[gi]),float(b_arr[gi])] for gi in range(len(REGIONS))},'fit_through':win_start,'version':f'world-l{LEAD}-v1-'+win_days[-1]}
+model={'lead':LEAD,'weight':1.0,'regions':REGIONS,'qm':qm,'base':bs,'trees':rt,'clf':{'base':math.log(cb/(1-cb)),'trees':ct,'threshold':TH,'th_regions':{REGIONS[gi]:float(thr_arr[gi]) for gi in range(len(REGIONS))}},'affine':{REGIONS[gi]:[float(a_arr[gi]),float(b_arr[gi])] for gi in range(len(REGIONS))},'fit_through':win_start,'abstain':[REGIONS[gi] for gi in range(len(REGIONS)) if abstain[gi]],'version':f'world-l{LEAD}-v2-'+win_days[-1]}
 json.dump(model,open(f'{W}/model.json','w'),separators=(',',':'))
 reg.save_model(f'{W}/reg-native.json');clf.save_model(f'{W}/clf-native.json')
 if os.environ.get('VD_UPLOAD','1')=='1':
