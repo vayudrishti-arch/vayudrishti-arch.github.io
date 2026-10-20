@@ -66,7 +66,8 @@ del pts;gc.collect()
 alld=json.load(urllib.request.urlopen(wurls['alld_world.json'],timeout=60))
 LAGGED={'2026-10-10','2026-10-11'}   # still ERA5-lagged; 2026-10-13 present but pinned out of fit+eval
 full_days=[d for d in alld if d not in LAGGED]
-built_days=sorted(full_days+['2021-03-24'])
+HAS_FULLGRID='world-chunk-128.tar.gz' in urls   # 2021-03-24 exists only as a full-grid day in the l1 corpus; its lead-2/3 runs predate the free GFS archive
+built_days=sorted(full_days+(['2021-03-24'] if HAS_FULLGRID else []))
 win_days=[d for d in built_days if WIN_START<=d<=WIN_END]
 assert len(win_days)==EVAL_DAYS,f'pinned window has {len(win_days)} days, expected {EVAL_DAYS}'
 win_start=WIN_START
@@ -97,6 +98,7 @@ def process_chunk(cname,dayset,store):
 main_days={}
 need_main={}
 skipped=[]
+if not HAS_FULLGRID:skipped.append(f'2021-03-24 (no lead-{LEAD} run in GFS archive; full-grid day exists only at lead-1)')
 for d in fit_days:
     mc=main_chunk(d)
     if mc is None:continue
