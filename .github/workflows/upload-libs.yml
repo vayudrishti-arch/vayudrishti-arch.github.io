@@ -1,0 +1,17 @@
+name: upload-libs
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: upload pipeline libs to world-assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload world-assets world/vdlibw.py world/rebuild_chunkw.py --clobber --repo $GITHUB_REPOSITORY
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/world-assets" --jq '.assets[].name'
