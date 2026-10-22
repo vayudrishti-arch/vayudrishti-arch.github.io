@@ -20,5 +20,5 @@ jobs:
         run: |
           git config user.name "vayudrishti-nightly"
           git config user.email "actions@users.noreply.github.com"
-          git add app/history
+          git add app/history app/history6h
           if ! git diff --cached --quiet; then git commit -m "history: nightly as-served archive + observed refresh"; git pull --rebase -q; git push; fi
