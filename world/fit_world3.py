@@ -25,7 +25,7 @@ import numpy as np
 REPO=os.environ.get('GITHUB_REPOSITORY','vayudrishti-arch/vayudrishti-arch.github.io')
 W='/tmp/fitw3';os.makedirs(W,exist_ok=True)
 EVAL_DAYS=60;MIN_HEAVY=300;HEAVY=64.5
-FIT_DAY_STRIDE=16;FIT_POINT_STRIDE=4
+FIT_DAY_STRIDE=int(os.environ.get('VD_DAY_STRIDE','16'));FIT_POINT_STRIDE=int(os.environ.get('VD_POINT_STRIDE','4'))
 WIN_START='2026-08-12';WIN_END='2026-10-12'   # pinned to world-v4's window
 def log(*a):print(*a,flush=True)
 def dl(url,path):
@@ -341,9 +341,9 @@ model={'lead':1,'weight':1.0,'regions':REGIONS,'qm':qm,'base':bs,'trees':rt,'clf
 json.dump(model,open(f'{W}/world-lead1-model-v6.json','w'),separators=(',',':'))
 reg.save_model(f'{W}/world-v6-reg.json');clf.save_model(f'{W}/world-v6-clf.json')
 if os.environ.get('VD_UPLOAD','1')=='1':
-    subprocess.run(['gh','release','view','world-fit-v6','--repo',REPO],capture_output=True)
-    r=subprocess.run(['gh','release','view','world-fit-v6','--repo',REPO],capture_output=True)
-    if r.returncode:subprocess.run(['gh','release','create','world-fit-v6','--repo',REPO,'--title','World fit v6 artifacts','--notes','Richer-features (spatial + prior-run) worldwide fit: model + metrics. Not deployed.'],check=True)
-    subprocess.run(['gh','release','upload','world-fit-v6',f'{W}/world-fit-v6-metrics.json',f'{W}/world-lead1-model-v6.json',f'{W}/world-v6-reg.json',f'{W}/world-v6-clf.json','--clobber','--repo',REPO],check=True)
+    subprocess.run(['gh','release','view',os.environ.get('VD_OUT','world-fit-v6'),'--repo',REPO],capture_output=True)
+    r=subprocess.run(['gh','release','view',os.environ.get('VD_OUT','world-fit-v6'),'--repo',REPO],capture_output=True)
+    if r.returncode:subprocess.run(['gh','release','create',os.environ.get('VD_OUT','world-fit-v6'),'--repo',REPO,'--title','World fit v6 artifacts','--notes','Richer-features (spatial + prior-run) worldwide fit: model + metrics. Not deployed.'],check=True)
+    subprocess.run(['gh','release','upload',os.environ.get('VD_OUT','world-fit-v6'),f'{W}/world-fit-v6-metrics.json',f'{W}/world-lead1-model-v6.json',f'{W}/world-v6-reg.json',f'{W}/world-v6-clf.json','--clobber','--repo',REPO],check=True)
     log('uploaded to world-fit-v6')
 log('DONE all_gates_pass',out['all_gates_pass'])
