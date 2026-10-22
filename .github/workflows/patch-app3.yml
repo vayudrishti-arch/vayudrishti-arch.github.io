@@ -1,0 +1,25 @@
+name: patch-app-hourly-mean-fix
+on:
+  workflow_dispatch:
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency: patch-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Write patch script
+        run: echo "aW1wb3J0IHN5cywgc3VicHJvY2VzcwpwPSdhcHAvaW5kZXguaHRtbCcKcz1vcGVuKHAsZW5jb2Rpbmc9J3V0Zi04JykucmVhZCgpCm9sZD0ncmV0dXJuIG4/TWF0aC5yb3VuZChzKjEwKS8xMDpudWxsJwpuZXc9J3JldHVybiBuP01hdGgucm91bmQocy9uKjEwKS8xMDpudWxsJwpjPXMuY291bnQob2xkKQphc3NlcnQgYz09MSwgZiJleHBlY3RlZCAxIG9jY3VycmVuY2UsIGZvdW5kIHtjfSIKcz1zLnJlcGxhY2Uob2xkLG5ldykKb3BlbihwLCd3JyxlbmNvZGluZz0ndXRmLTgnKS53cml0ZShzKQpwcmludCgicGF0Y2hlZCBibWVhbiB0byBhdmVyYWdlIChkaXZpZGUgYnkgbikiKQo=" | base64 -d > /tmp/patch_app3.py
+      - name: Apply patch
+        run: python3 /tmp/patch_app3.py
+      - name: Commit
+        run: |
+          git config user.name "vayudrishti-bot"
+          git config user.email "bot@vayudrishti.github.io"
+          git add app/index.html
+          git diff --cached --quiet && echo "no change" && exit 0
+          git commit -m "app: fix 6-hourly summary temps - average, not sum"
+          git pull --rebase
+          git push
