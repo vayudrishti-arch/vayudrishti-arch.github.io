@@ -1,7 +1,7 @@
 {
  "corpus_days": 1070,
  "corpus_note": "The archived corpus does not contain every calendar day; only days listed in the files are real archived data.",
- "generated_utc": "2026-10-22T10:16:00Z",
+ "generated_utc": "2026-10-22T23:06:09Z",
  "sites": {
   "pune": {
    "lat": 18.51957,
@@ -565,5 +565,235 @@
   "observed_temp": "Observed daily max/min temperature, ERA5 via Open-Meteo archive. Same lag family.",
   "point": "Values at the nearest VayuDrishti network point (within about 15 km of the named place).",
   "raw_48_72": "Raw GFS 48h/72h forecast for that day from the worldwide archived corpus (nearest world-grid point). Corrected 48h/72h was not archived before 2026-10-22."
+ },
+ "originals": {
+  "kind": "archived-original",
+  "path": "originals/<site>/<year>.json",
+  "note": "Original live forecasts captured nightly since 2026-10-22 ~02:00 IST. Earlier dates have no original - only the labeled reconstruction.",
+  "sites": {
+   "pune": [
+    "2026"
+   ],
+   "mumbai": [
+    "2026"
+   ],
+   "delhi": [
+    "2026"
+   ],
+   "chennai": [
+    "2026"
+   ],
+   "srinagar": [
+    "2026"
+   ],
+   "shimla": [
+    "2026"
+   ],
+   "chandigarh": [
+    "2026"
+   ],
+   "jaipur": [
+    "2026"
+   ],
+   "jodhpur": [
+    "2026"
+   ],
+   "ahmedabad": [
+    "2026"
+   ],
+   "bhopal": [
+    "2026"
+   ],
+   "nagpur": [
+    "2026"
+   ],
+   "raipur": [
+    "2026"
+   ],
+   "lucknow": [
+    "2026"
+   ],
+   "patna": [
+    "2026"
+   ],
+   "kolkata": [
+    "2026"
+   ],
+   "bhubaneswar": [
+    "2026"
+   ],
+   "guwahati": [
+    "2026"
+   ],
+   "shillong": [
+    "2026"
+   ],
+   "imphal": [
+    "2026"
+   ],
+   "hyderabad": [
+    "2026"
+   ],
+   "bengaluru": [
+    "2026"
+   ],
+   "thiruvananthapuram": [
+    "2026"
+   ],
+   "port-blair": [
+    "2026"
+   ]
+  }
+ },
+ "history6h": {
+  "kind": "hourly",
+  "path": "history6h/<site>/<year>.json",
+  "note": "Hourly raw GFS (grib-archive backfill; forward days = as-served capture) + final ERA5 observed (about 5 days late). No trained values at this scale.",
+  "sites": {
+   "pune": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "mumbai": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "delhi": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "chennai": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "srinagar": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "shimla": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "chandigarh": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "jaipur": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "jodhpur": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "ahmedabad": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "bhopal": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "nagpur": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "raipur": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "lucknow": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "patna": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "kolkata": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "bhubaneswar": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "guwahati": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "shillong": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "imphal": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "hyderabad": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "bengaluru": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "thiruvananthapuram": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ],
+   "port-blair": [
+    "2021",
+    "2022",
+    "2023",
+    "2026"
+   ]
+  }
  }
 }
