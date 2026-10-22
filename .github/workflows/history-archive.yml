@@ -1,0 +1,24 @@
+name: history-archive
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 20 * * *'
+permissions:
+  contents: write
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy
+      - name: capture tonight's as-served forecasts and refresh recent observed
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 history/archive_day.py
+      - name: commit archive updates
+        run: |
+          git config user.name "vayudrishti-nightly"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/history
+          if ! git diff --cached --quiet; then git commit -m "history: nightly as-served archive + observed refresh"; git pull --rebase -q; git push; fi
