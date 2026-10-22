@@ -155,6 +155,8 @@ async function renderPF(){
     let raw,trained;
     if(o){raw=mmv(o[2]);trained=mmv(o[3])+badge('original')}
     else if(lead===24&&hrow){raw=mmv(hrow[1]);trained=hrow[2]==null?'—':mmv(hrow[2])+badge('replay of current model')}
+    else if(lead===48&&hrow&&hrow[6]!=null){raw=mmv(hrow[6]);trained='not archived'}
+    else if(lead===72&&hrow&&hrow[7]!=null){raw=mmv(hrow[7]);trained='not archived'}
     else{raw=lead===24?'—':'not archived';trained='not archived'}
     return '<tr><td>'+lead+'h</td><td>'+raw+'</td><td>'+trained+'</td><td>'+(lead===24?mmv(obs):'')+'</td></tr>';
   }).join('');
