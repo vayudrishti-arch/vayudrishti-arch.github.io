@@ -191,7 +191,7 @@ async function renderH6(site,date){
   const day=doc.days[date],F=day.f,O=day.o;
   const fmt=v=>v==null?'\u2014':v;
   const bsum=(i,src,a,b)=>{let s=0,n=0;for(let h=a;h<b;h++){const v=src?src[h][i]:null;if(v!=null){s+=v;n++}}return n?Math.round(s*100)/100:null};
-  const bmean=(i,src,a,b)=>{let s=0,n=0;for(let h=a;h<b;h++){const v=src?src[h][i]:null;if(v!=null){s+=v;n++}}return n?Math.round(s*10)/10:null};
+  const bmean=(i,src,a,b)=>{let s=0,n=0;for(let h=a;h<b;h++){const v=src?src[h][i]:null;if(v!=null){s+=v;n++}}return n?Math.round(s/n*10)/10:null};
   const blocks=[['00\u201306',0,6],['06\u201312',6,12],['12\u201318',12,18],['18\u201324',18,24]];
   pfH6Rows.innerHTML=blocks.map(b=>'<tr><td>'+b[0]+'</td><td>'+fmt(bsum(0,F,b[1],b[2]))+'</td><td>'+fmt(bsum(5,F,b[1],b[2]))+'</td><td>'+fmt(bsum(7,F,b[1],b[2]))+'</td><td>'+fmt(bsum(0,O,b[1],b[2]))+'</td><td>'+fmt(bmean(1,F,b[1],b[2]))+'</td><td>'+fmt(bmean(1,O,b[1],b[2]))+'</td></tr>').join('');
   pfHRows.innerHTML=F.map((r,h)=>{const o=O?O[h]:null;return '<tr><td>'+String(h).padStart(2,'0')+':00</td><td>'+fmt(r[0])+'</td><td>'+fmt(r[1])+'</td><td>'+fmt(r[2])+'</td><td>'+fmt(r[3])+'</td><td>'+fmt(r[4])+'</td><td>'+fmt(r[5])+'</td><td>'+fmt(r[6])+'</td><td>'+fmt(r[7])+'</td><td>'+fmt(r[8])+'</td><td>'+(o?fmt(o[0]):'\u2014')+'</td><td>'+(o?fmt(o[1]):'\u2014')+'</td><td>'+(o?fmt(o[2]):'\u2014')+'</td><td>'+(o?fmt(o[3]):'\u2014')+'</td><td>'+(o?fmt(o[4]):'\u2014')+'</td></tr>'}).join('');
