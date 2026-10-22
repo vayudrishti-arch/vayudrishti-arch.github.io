@@ -1,0 +1,16 @@
+name: eval-served-l2v5
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy xgboost scikit-learn
+      - name: eval-only re-run of l2-v5 on pinned window with SERVED abstain list (west+oceania added post-window, disclosed, owner-approved Oct 22 2026)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 world/eval_served_l2v5.py
