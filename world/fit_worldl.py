@@ -13,7 +13,7 @@ import numpy as np
 REPO=os.environ.get('GITHUB_REPOSITORY','vayudrishti-arch/vayudrishti-arch.github.io')
 W='/tmp/fitw';os.makedirs(W,exist_ok=True)
 EVAL_DAYS=60;MIN_HEAVY=300;HEAVY=64.5
-FIT_DAY_STRIDE=16;FIT_POINT_STRIDE=4
+FIT_DAY_STRIDE=int(os.environ.get('VD_DAY_STRIDE','16'));FIT_POINT_STRIDE=int(os.environ.get('VD_POINT_STRIDE','4'))
 TAG=os.environ.get('VD_TAG','data-days-world');LEAD=int(os.environ.get('VD_LEAD','1'));OUT=os.environ.get('VD_OUT','world-fit')
 WIN_START='2026-08-12';WIN_END='2026-10-12'   # pinned to world-v4's window
 def log(*a):print(*a,flush=True)
