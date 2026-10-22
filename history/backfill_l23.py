@@ -61,6 +61,7 @@ for lead,tag in ((2,'data-days-world-l2'),(3,'data-days-world-l3')):
     chunks=sorted(a['browser_download_url'] for a in rel['assets'] if a['name'].startswith('world-chunk-') and a['name'].endswith('.tar.gz'))
     log(tag,'chunks:',len(chunks))
     t0=time.time()
+    skipped=0
     for u in chunks:
         fn=f"{W}/{u.rsplit('/',1)[-1]}"
         if not os.path.exists(fn):
@@ -70,10 +71,16 @@ for lead,tag in ((2,'data-days-world-l2'),(3,'data-days-world-l3')):
             d=m.name[:10]
             z=zipfile.ZipFile(io.BytesIO(tf.extractfile(m).read()))
             RR=np.load(io.BytesIO(z.read('RR.npy')))
+            if RR.shape[0]!=N_MAIN:
+                # ext-grid files are the Antarctic extension (lat -60..-69S): no network site is
+                # anywhere near them, so they carry nothing for the 24-site history.
+                skipped+=1
+                continue
             for k,(name,_,_) in enumerate(SITES):
                 series[lead][name][d]=round(float(RR[SIDX[k]]),2)
         tf.close();os.remove(fn)
         log(tag,'done',u.rsplit('/',1)[-1],'elapsed',int(time.time()-t0),'s')
+    log(tag,'skipped non-main-grid files:',skipped)
 
 # merge into app/history/<site>/<year>.json (extend existing dates only)
 OUT=os.path.join(os.getcwd(),'app','history')
