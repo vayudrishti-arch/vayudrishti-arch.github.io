@@ -1,0 +1,19 @@
+name: fit-world-v6-4x
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy xgboost scikit-learn
+      - name: 24h 4x-day trial fit (research only, no deploy; outputs to world-fit-v6-4x, live world-fit-v6 untouched)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VD_OUT: world-fit-v6-4x
+          VD_DAY_STRIDE: '4'
+          VD_POINT_STRIDE: '16'
+        run: python3 world/fit_world3.py
