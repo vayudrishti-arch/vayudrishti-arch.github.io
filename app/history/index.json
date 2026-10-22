@@ -1,0 +1,568 @@
+{
+ "corpus_days": 1070,
+ "corpus_note": "The archived corpus does not contain every calendar day; only days listed in the files are real archived data.",
+ "generated_utc": "2026-10-22T08:59:36Z",
+ "sites": {
+  "pune": {
+   "lat": 18.51957,
+   "lon": 73.85535,
+   "grid_index": 2203,
+   "grid_region": "south",
+   "grid_distance_deg": 0.107,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "mumbai": {
+   "lat": 19.076,
+   "lon": 72.8777,
+   "grid_index": 2294,
+   "grid_region": "south",
+   "grid_distance_deg": 0.144,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "delhi": {
+   "lat": 28.6139,
+   "lon": 77.209,
+   "grid_index": 1511,
+   "grid_region": "north",
+   "grid_distance_deg": 0.121,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "chennai": {
+   "lat": 13.0827,
+   "lon": 80.2707,
+   "grid_index": 2493,
+   "grid_region": "south",
+   "grid_distance_deg": 0.085,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "srinagar": {
+   "lat": 34.0837,
+   "lon": 74.7973,
+   "grid_index": 1704,
+   "grid_region": "north",
+   "grid_distance_deg": 0.096,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "shimla": {
+   "lat": 31.1048,
+   "lon": 77.1734,
+   "grid_index": 6521,
+   "grid_region": "north",
+   "grid_distance_deg": 0.13,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "chandigarh": {
+   "lat": 30.7333,
+   "lon": 76.7794,
+   "grid_index": 1625,
+   "grid_region": "north",
+   "grid_distance_deg": 0.034,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "jaipur": {
+   "lat": 26.9124,
+   "lon": 75.7873,
+   "grid_index": 3969,
+   "grid_region": "west",
+   "grid_distance_deg": 0.095,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "jodhpur": {
+   "lat": 26.2389,
+   "lon": 73.0243,
+   "grid_index": 3891,
+   "grid_region": "west",
+   "grid_distance_deg": 0.027,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "ahmedabad": {
+   "lat": 23.0225,
+   "lon": 72.5714,
+   "grid_index": 3579,
+   "grid_region": "west",
+   "grid_distance_deg": 0.075,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "bhopal": {
+   "lat": 23.2599,
+   "lon": 77.4126,
+   "grid_index": 441,
+   "grid_region": "central",
+   "grid_distance_deg": 0.088,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "nagpur": {
+   "lat": 21.1458,
+   "lon": 79.0882,
+   "grid_index": 179,
+   "grid_region": "central",
+   "grid_distance_deg": 0.137,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "raipur": {
+   "lat": 21.2514,
+   "lon": 81.6296,
+   "grid_index": 168,
+   "grid_region": "central",
+   "grid_distance_deg": 0.12,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "lucknow": {
+   "lat": 26.8467,
+   "lon": 80.9462,
+   "grid_index": 884,
+   "grid_region": "central",
+   "grid_distance_deg": 0.111,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "patna": {
+   "lat": 25.5941,
+   "lon": 85.1376,
+   "grid_index": 1329,
+   "grid_region": "east",
+   "grid_distance_deg": 0.147,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "kolkata": {
+   "lat": 22.5726,
+   "lon": 88.3639,
+   "grid_index": 1099,
+   "grid_region": "east",
+   "grid_distance_deg": 0.135,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "bhubaneswar": {
+   "lat": 20.2961,
+   "lon": 85.8245,
+   "grid_index": 969,
+   "grid_region": "east",
+   "grid_distance_deg": 0.088,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "guwahati": {
+   "lat": 26.1445,
+   "lon": 91.7362,
+   "grid_index": 1978,
+   "grid_region": "northeast",
+   "grid_distance_deg": 0.106,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "shillong": {
+   "lat": 25.5788,
+   "lon": 91.8933,
+   "grid_index": 1917,
+   "grid_region": "northeast",
+   "grid_distance_deg": 0.133,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "imphal": {
+   "lat": 24.817,
+   "lon": 93.9368,
+   "grid_index": 1871,
+   "grid_region": "northeast",
+   "grid_distance_deg": 0.092,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "hyderabad": {
+   "lat": 17.385,
+   "lon": 78.4867,
+   "grid_index": 3269,
+   "grid_region": "south",
+   "grid_distance_deg": 0.116,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "bengaluru": {
+   "lat": 12.9716,
+   "lon": 77.5946,
+   "grid_index": 2504,
+   "grid_region": "south",
+   "grid_distance_deg": 0.099,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "thiruvananthapuram": {
+   "lat": 8.5241,
+   "lon": 76.9366,
+   "grid_index": 2590,
+   "grid_region": "south",
+   "grid_distance_deg": 0.068,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  },
+  "port-blair": {
+   "lat": 11.6234,
+   "lon": 92.7265,
+   "grid_index": 1436,
+   "grid_region": "islands",
+   "grid_distance_deg": 0.0,
+   "years": [
+    "2021",
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026"
+   ]
+  }
+ },
+ "years": {
+  "pune": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "mumbai": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "delhi": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "chennai": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "srinagar": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "shimla": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "chandigarh": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "jaipur": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "jodhpur": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "ahmedabad": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "bhopal": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "nagpur": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "raipur": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "lucknow": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "patna": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "kolkata": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "bhubaneswar": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "guwahati": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "shillong": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "imphal": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "hyderabad": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "bengaluru": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "thiruvananthapuram": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ],
+  "port-blair": [
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025",
+   "2026"
+  ]
+ },
+ "labels": {
+  "raw": "Raw GFS 24h forecast for that day (as archived in the verified corpus)",
+  "corrected_24h": "RECONSTRUCTION: current live 24h model replayed on archived data. Not the original live forecast (predictions were not stored before 2026-10-22).",
+  "observed_rain": "Observed daily rain, ERA5 reanalysis (our verified corpus). ERA5 publishes with a lag of several days; recent days may be missing.",
+  "observed_temp": "Observed daily max/min temperature, ERA5 via Open-Meteo archive. Same lag family.",
+  "point": "Values at the nearest VayuDrishti network point (within about 15 km of the named place)."
+ }
+}
