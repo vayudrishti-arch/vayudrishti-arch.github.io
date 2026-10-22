@@ -21,13 +21,14 @@ SITES=[["pune",18.51957,73.85535],["mumbai",19.076,72.8777],["delhi",28.6139,77.
 REGS=["central","east","islands","north","northeast","south","west"]
 BUNDLE='https://github.com/user-attachments/files/33634084/1-rebuild_bundle2.tar.gz'
 
-def get(url,tries=4):
+def get(url,tries=6):
     for t in range(tries):
         try:
-            return urllib.request.urlopen(url,timeout=60).read()
+            req=urllib.request.Request(url,headers={'User-Agent':'vayudrishti-backfill'})
+            return urllib.request.urlopen(req,timeout=90).read()
         except Exception:
             if t==tries-1:raise
-            time.sleep(2*(t+1))
+            time.sleep(3*(t+1))
 
 # grid + site mapping
 subprocess.run(['curl','-sL','-o',f'{W}/rb.tgz',BUNDLE],check=True)
@@ -131,12 +132,16 @@ with concurrent.futures.ThreadPoolExecutor(8) as ex:
 temp={}
 for name,la,lo in SITES:
     temp[name]={}
-    for y0,y1 in ((2021,2022),(2023,2024),(2025,2026)):
-        url=(f'https://archive-api.open-meteo.com/v1/archive?latitude={la}&longitude={lo}'
-             f'&start_date={y0}-01-01&end_date={y1}-12-31&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FKolkata')
-        j=json.loads(get(url))
-        for t,mx,mn in zip(j['daily']['time'],j['daily']['temperature_2m_max'],j['daily']['temperature_2m_min']):
-            if mx is not None:temp[name][t]=[round(mx,1),round(mn,1)]
+    try:
+        for y0,y1 in ((2021,2022),(2023,2024),(2025,2026)):
+            url=(f'https://archive-api.open-meteo.com/v1/archive?latitude={la}&longitude={lo}'
+                 f'&start_date={y0}-01-01&end_date={y1}-12-31&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FKolkata')
+            j=json.loads(get(url))
+            for t,mx,mn in zip(j['daily']['time'],j['daily']['temperature_2m_max'],j['daily']['temperature_2m_min']):
+                if mx is not None:temp[name][t]=[round(mx,1),round(mn,1)]
+            time.sleep(1)
+    except Exception as e:
+        log('temp archive FAILED for',name,'- continuing without it:',repr(e)[:120])
     log('temp archive',name,len(temp[name]))
 
 # write chunked history files
