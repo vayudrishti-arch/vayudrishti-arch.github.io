@@ -1,0 +1,59 @@
+# One-off prep: make fit_world3.py strides + output tag env-configurable (defaults keep
+# current behaviour), and add the research-only 24h 4x-day trial workflow.
+# Requested by the user Oct 22, 2026 ~5:15 PM IST (24h longer-window trial, research only).
+name: prep-v6-4x
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch fit_world3.py + add trial workflow
+        run: |
+          set -e
+          python3 - <<'PY'
+          p='world/fit_world3.py'; s=open(p).read()
+          r1o='FIT_DAY_STRIDE=16;FIT_POINT_STRIDE=4'
+          r1n="FIT_DAY_STRIDE=int(os.environ.get('VD_DAY_STRIDE','16'));FIT_POINT_STRIDE=int(os.environ.get('VD_POINT_STRIDE','4'))"
+          assert s.count(r1o)==1, s.count(r1o)
+          s=s.replace(r1o,r1n)
+          assert s.count("'world-fit-v6'")==4, s.count("'world-fit-v6'")
+          s=s.replace("'world-fit-v6'","os.environ.get('VD_OUT','world-fit-v6')")
+          assert s.count("os.environ.get('VD_OUT','world-fit-v6')")==4, s.count("os.environ.get('VD_OUT','world-fit-v6')")
+          open(p,'w').write(s)
+          print('patched fit_world3.py')
+          import textwrap
+          wf='''name: fit-world-v6-4x
+          on:
+            workflow_dispatch:
+          permissions:
+            contents: write
+          jobs:
+            fit:
+              runs-on: ubuntu-latest
+              timeout-minutes: 340
+              steps:
+                - uses: actions/checkout@v4
+                - run: pip install numpy xgboost scikit-learn
+                - name: 24h 4x-day trial fit (research only, no deploy; outputs to world-fit-v6-4x, live world-fit-v6 untouched)
+                  env:
+                    GH_TOKEN: TOKENEXPR
+                    VD_OUT: world-fit-v6-4x
+                    VD_DAY_STRIDE: '4'
+                    VD_POINT_STRIDE: '16'
+                  run: python3 world/fit_world3.py
+          '''
+          wf=textwrap.dedent(wf).replace('TOKENEXPR','${'+'{ secrets.GITHUB_TOKEN }}')
+          open('.github/workflows/fit-world-v6-4x.yml','w').write(wf)
+          print('wrote trial workflow')
+          PY
+      - name: Commit
+        run: |
+          git config user.name "vayudrishti-bot"
+          git config user.email "bot@vayudrishti.local"
+          git add world/fit_world3.py .github/workflows/fit-world-v6-4x.yml
+          git diff --cached --quiet || git commit -m "fit_world3.py: env-configurable strides + output tag (defaults unchanged); add research-only 24h 4x-day trial workflow"
+          git push
