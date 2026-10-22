@@ -1,7 +1,7 @@
 {
  "corpus_days": 1070,
  "corpus_note": "The archived corpus does not contain every calendar day; only days listed in the files are real archived data.",
- "generated_utc": "2026-10-22T08:59:36Z",
+ "generated_utc": "2026-10-22T10:16:00Z",
  "sites": {
   "pune": {
    "lat": 18.51957,
@@ -563,6 +563,7 @@
   "corrected_24h": "RECONSTRUCTION: current live 24h model replayed on archived data. Not the original live forecast (predictions were not stored before 2026-10-22).",
   "observed_rain": "Observed daily rain, ERA5 reanalysis (our verified corpus). ERA5 publishes with a lag of several days; recent days may be missing.",
   "observed_temp": "Observed daily max/min temperature, ERA5 via Open-Meteo archive. Same lag family.",
-  "point": "Values at the nearest VayuDrishti network point (within about 15 km of the named place)."
+  "point": "Values at the nearest VayuDrishti network point (within about 15 km of the named place).",
+  "raw_48_72": "Raw GFS 48h/72h forecast for that day from the worldwide archived corpus (nearest world-grid point). Corrected 48h/72h was not archived before 2026-10-22."
  }
 }
