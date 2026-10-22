@@ -214,6 +214,109 @@ for name,lat,lon,region in SITES:
     time.sleep(0.4)
 log('observed refresh files updated:',updated)
 
+
+# --- history6h: capture the as-served hourly forecast (per lead) + fill ERA5 observed hourly ---
+# Same local-day convention as the daily rows (UTC+5): local day D = UTC hours D-1 19:00..D 18:00.
+# Each target date's 9 forecast slots assemble over three nights (lead 3 first, then 2, then 1);
+# slots are only ever filled where currently null. Observed hourly fills in as final ERA5 publishes.
+H6F=['rain24_mm','temp24_c','rh24_pct','wind24_kmh','cloud24_pct','rain48_mm','temp48_c','rain72_mm','temp72_c']
+H6O=['rain_mm','temp_c','rh_pct','wind_kmh','cloud_pct']
+H6NOTE=('Hourly backtrack. Older days: raw GFS from the NOAA grib archive at the nearest network/world grid cell. '
+        'Forward days (since 2026-10-22): as-served Open-Meteo GFS forecast captured nightly, the values the live site showed. '
+        'Observed = final ERA5 via Open-Meteo (models=era5), about 5 days late; null hours fill in nightly. '
+        'No trained values: the learned correction works at full-day scale only. Local day convention matches the daily rows (UTC+5).')
+def h6doc(name,y):
+    return {'site':name,'year':y,'hours':{'f':H6F,'o':H6O},'days':{},'note':H6NOTE}
+h6captured=0
+for name,lat,lon,region in SITES:
+    try:
+        url=('https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s&models=gfs_seamless'
+             '&hourly=rain,showers,temperature_2m,relative_humidity_2m,wind_speed_10m,cloud_cover'
+             '&timezone=GMT&forecast_days=5&precipitation_unit=mm')%(lat,lon)
+        a=json.loads(get(url));h=a['hourly']
+    except Exception as e:
+        log('history6h capture fetch failed',name,e);continue
+    perday={}
+    for i,t in enumerate(h['time']):
+        u=dt.datetime.fromisoformat(t);ldt=u+dt.timedelta(hours=5)
+        r=h['rain'][i];sh=h['showers'][i];tp=h['temperature_2m'][i];hu=h['relative_humidity_2m'][i];ws=h['wind_speed_10m'][i];cc=h['cloud_cover'][i]
+        if any(v is None for v in (r,sh,tp,hu,ws,cc)):continue
+        perday.setdefault(ldt.date().isoformat(),{})[ldt.hour]=[round(r+sh,2),round(tp,1),round(hu,0),round(ws,1),round(cc,0)]
+    cache={}
+    for date,hours in sorted(perday.items()):
+        if len(hours)<24:continue
+        lead=round((local_noon_ms(date,'Asia/Kolkata')-loaded)/3600000/24)
+        if lead<1 or lead>3:continue
+        y=date[:4];fp=os.path.join('app','history6h',name,y+'.json')
+        if fp not in cache:
+            if os.path.exists(fp):cache[fp]=[json.load(open(fp)),False]
+            else:
+                os.makedirs(os.path.dirname(fp),exist_ok=True);cache[fp]=[h6doc(name,y),False]
+        doc,dirty=cache[fp]
+        day=doc['days'].setdefault(date,{'f':[[None]*9 for _ in range(24)],'o':None})
+        slots={1:[0,1,2,3,4],2:[5,6],3:[7,8]}[lead]
+        for hh in range(24):
+            vals=hours[hh]
+            pick=[vals[0],vals[1],vals[2],vals[3],vals[4]] if lead==1 else [vals[0],vals[1]]
+            for sl,v in zip(slots,pick):
+                if day['f'][hh][sl] is None:day['f'][hh][sl]=v;dirty=True
+        if dirty:cache[fp][1]=True;h6captured+=1
+    for fp,(doc,dirty) in cache.items():
+        if dirty:
+            doc['days']=dict(sorted(doc['days'].items()))
+            json.dump(doc,open(fp,'w'),separators=(',',':'))
+    time.sleep(0.4)
+log('history6h as-served hourly captured (site-days touched):',h6captured)
+
+# --- history6h observed hourly fill (final ERA5, same sliding window as the daily refresh) ---
+h6obs=0
+for name,lat,lon,region in SITES:
+    try:
+        url=('https://archive-api.open-meteo.com/v1/archive?latitude=%s&longitude=%s&start_date=%s&end_date=%s'
+             '&hourly=precipitation,temperature_2m,relative_humidity_2m,wind_speed_10m,cloud_cover'
+             '&timezone=GMT&models=era5')%(lat,lon,
+             (today_i-dt.timedelta(days=15)).isoformat(),(today_i-dt.timedelta(days=5)).isoformat())
+        j=json.loads(get(url))['hourly']
+    except Exception as e:
+        log('history6h obs fetch failed',name,e);continue
+    perday={}
+    for i,t in enumerate(j['time']):
+        u=dt.datetime.fromisoformat(t);ldt=u+dt.timedelta(hours=5)
+        perday.setdefault(ldt.date().isoformat(),{})[ldt.hour]=[
+            j['precipitation'][i],j['temperature_2m'][i],j['relative_humidity_2m'][i],j['wind_speed_10m'][i],j['cloud_cover'][i]]
+    cache={}
+    for date,hours in sorted(perday.items()):
+        if date<start or date>end:continue
+        y=date[:4];fp=os.path.join('app','history6h',name,y+'.json')
+        if fp not in cache:
+            if os.path.exists(fp):cache[fp]=[json.load(open(fp)),False]
+            else:
+                os.makedirs(os.path.dirname(fp),exist_ok=True);cache[fp]=[h6doc(name,y),False]
+        doc,dirty=cache[fp]
+        day=doc['days'].setdefault(date,{'f':[[None]*9 for _ in range(24)],'o':None})
+        o=[[None]*5 for _ in range(24)]
+        for hh,vals in hours.items():
+            o[hh]=[None if v is None else round(float(v),2) for v in vals]
+        cur=day.get('o')
+        needs=cur is None or any(any(v is None for v in row) for row in cur)
+        fresh=any(any(v is not None for v in row) for row in o)
+        if needs and fresh:
+            # fill still-null hours from the fresh pull, keep existing non-null values
+            if cur is None:day['o']=o
+            else:
+                for hh in range(24):
+                    for k in range(5):
+                        if cur[hh][k] is None and o[hh][k] is not None:cur[hh][k]=o[hh][k]
+                day['o']=cur
+            dirty=True;h6obs+=1
+        if dirty:cache[fp][1]=True
+    for fp,(doc,dirty) in cache.items():
+        if dirty:
+            doc['days']=dict(sorted(doc['days'].items()))
+            json.dump(doc,open(fp,'w'),separators=(',',':'))
+    time.sleep(0.4)
+log('history6h observed hourly filled (site-days touched):',h6obs)
+
 # --- index update ---
 idxp=os.path.join('app','history','index.json')
 if os.path.exists(idxp):
@@ -221,6 +324,9 @@ if os.path.exists(idxp):
     idx['originals']={'kind':'archived-original','path':'originals/<site>/<year>.json',
         'note':'Original live forecasts captured nightly since 2026-10-22 ~02:00 IST. Earlier dates have no original - only the labeled reconstruction.',
         'sites':{s[0]:sorted({f[:-5] for f in os.listdir(os.path.join('app','history','originals',s[0]))} if os.path.isdir(os.path.join('app','history','originals',s[0])) else []) for s in SITES}}
+    idx['history6h']={'kind':'hourly','path':'history6h/<site>/<year>.json',
+        'note':'Hourly raw GFS (grib-archive backfill; forward days = as-served capture) + final ERA5 observed (about 5 days late). No trained values at this scale.',
+        'sites':{s[0]:sorted({f[:-5] for f in os.listdir(os.path.join('app','history6h',s[0]))} if os.path.isdir(os.path.join('app','history6h',s[0])) else []) for s in SITES}}
     idx['generated_utc']=dt.datetime.utcnow().isoformat(timespec='seconds')+'Z'
     json.dump(idx,open(idxp,'w'),indent=1)
 log('DONE archive_day')
