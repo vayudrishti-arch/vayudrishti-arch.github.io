@@ -163,42 +163,68 @@ for d in fit_days:
         if mc<63:need_main.setdefault((ptag,f'world-chunk-{64+mc}.tar.gz'),set()).add(d)
 if '2021-03-24' in fit_days:need_main.setdefault((TAG,'world-chunk-128.tar.gz'),set()).add('2021-03-24')
 # build paired 1M day rows: main + ext per date (+ prior-lead RR rows)
-ext_days={}
-pri={(ptag,0):{} for ptag,_ in PRIORS};pri.update({(ptag,1):{} for ptag,_ in PRIORS})
-for (ptag,cname),dset in sorted(need_main.items()):
-    ci=int(cname.split('-')[2].split('.')[0])
-    if ptag==TAG:
-        process_chunk(ptag,cname,dset,ext_days if ci>=64 else main_days)
-    else:
-        process_chunk(ptag,cname,dset,pri[(ptag,1 if ci>=64 else 0)],rr_only=True)
-    log('streamed',ptag,cname,'elapsed',int(time.time()-t0),'s')
-# pair and subsample
+# pair and subsample per chunk pair while streaming (peak RAM = one chunk-pair set + subsample buffer,
+# not all fit days at full grid - the previous all-chunk buffering OOM-killed the runner at 246 fit days)
 n_main=980692
 XL=[]
-for d in sorted(fit_days):
+ext_days={}
+pri={(ptag,0):{} for ptag,_ in PRIORS};pri.update({(ptag,1):{} for ptag,_ in PRIORS})
+buf_days=[]
+mcids=sorted({int(c.split('-')[2].split('.')[0]) for (tg,c) in need_main if tg==TAG and int(c.split('-')[2].split('.')[0])<64})
+for ci in mcids:
+    cn=f'world-chunk-{ci}.tar.gz';en=f'world-chunk-{64+ci}.tar.gz'
+    if (TAG,cn) in need_main:
+        process_chunk(TAG,cn,need_main[(TAG,cn)],main_days);log('streamed',TAG,cn,'elapsed',int(time.time()-t0),'s')
+    if (TAG,en) in need_main:
+        process_chunk(TAG,en,need_main[(TAG,en)],ext_days);log('streamed',TAG,en,'elapsed',int(time.time()-t0),'s')
+    for ptag,_ in PRIORS:
+        if (ptag,cn) in need_main:
+            process_chunk(ptag,cn,need_main[(ptag,cn)],pri[(ptag,0)],rr_only=True);log('streamed',ptag,cn,'elapsed',int(time.time()-t0),'s')
+        if (ptag,en) in need_main:
+            process_chunk(ptag,en,need_main[(ptag,en)],pri[(ptag,1)],rr_only=True);log('streamed',ptag,en,'elapsed',int(time.time()-t0),'s')
+    for d in sorted(need_main.get((TAG,cn),())):
+        prs=[];ok=True
+        for ptag,_ in PRIORS:
+            a=pri[(ptag,0)].get(d);b=pri[(ptag,1)].get(d)
+            if a is None or b is None:ok=False;break
+            prs.append(np.concatenate([a,b]))
+        if not ok:skipped.append((d,'missing prior-lead coverage'));continue
+        if d in main_days and d in ext_days:
+            F=np.concatenate([main_days[d][0],ext_days[d][0]]);RR=np.concatenate([main_days[d][1],ext_days[d][1]]);T=np.concatenate([main_days[d][2],ext_days[d][2]])
+        elif d in main_days:
+            F,RR,T=main_days[d]
+            if len(RR)==n_main:continue  # missing ext pair (should not happen for fit days)
+        else:
+            skipped.append(d);continue
+        mn,mx,wf=nbr_stats(RR)
+        XL.append(np.column_stack([mn[sub],mx[sub],wf[sub]]+[p[sub] for p in prs]).astype(np.float32))
+        FL.append(F[sub]);RL.append(RR[sub]);TL.append(T[sub]);DL.append(np.full(nsub,int(d.replace('-','')),np.int32));buf_days.append(d)
+        del F,RR,T,mn,mx,wf,prs
+        del main_days[d];del ext_days[d]
+        for ptag,_ in PRIORS:pri[(ptag,0)].pop(d,None);pri[(ptag,1)].pop(d,None)
+    gc.collect();log('fit buf days',len(FL),'elapsed',int(time.time()-t0),'s')
+if (TAG,'world-chunk-128.tar.gz') in need_main:
+    process_chunk(TAG,'world-chunk-128.tar.gz',need_main[(TAG,'world-chunk-128.tar.gz')],ext_days)
+    log('streamed',TAG,'world-chunk-128.tar.gz','elapsed',int(time.time()-t0),'s')
+    d='2021-03-24'
     prs=[];ok=True
     for ptag,_ in PRIORS:
         a=pri[(ptag,0)].get(d);b=pri[(ptag,1)].get(d)
         if a is None or b is None:ok=False;break
         prs.append(np.concatenate([a,b]))
-    if not ok:skipped.append((d,'missing prior-lead coverage'));continue
-    if d in main_days and d in ext_days:
-        F=np.concatenate([main_days[d][0],ext_days[d][0]]);RR=np.concatenate([main_days[d][1],ext_days[d][1]]);T=np.concatenate([main_days[d][2],ext_days[d][2]])
-    elif d in main_days:
-        F,RR,T=main_days[d]
-        if len(RR)==n_main:continue  # missing ext pair (should not happen for fit days)
+    if not ok:skipped.append((d,'missing prior-lead coverage'))
     elif d in ext_days and len(ext_days[d][1])==1000000:
         F,RR,T=ext_days[d]  # chunk-128 full-grid day
+        mn,mx,wf=nbr_stats(RR)
+        XL.append(np.column_stack([mn[sub],mx[sub],wf[sub]]+[p[sub] for p in prs]).astype(np.float32))
+        FL.append(F[sub]);RL.append(RR[sub]);TL.append(T[sub]);DL.append(np.full(nsub,int(d.replace('-','')),np.int32));buf_days.append(d)
+        del F,RR,T,mn,mx,wf,prs;del ext_days[d]
     else:
-        skipped.append(d);continue
-    mn,mx,wf=nbr_stats(RR)
-    XL.append(np.column_stack([mn[sub],mx[sub],wf[sub]]+[p[sub] for p in prs]).astype(np.float32))
-    FL.append(F[sub]);RL.append(RR[sub]);TL.append(T[sub]);DL.append(np.full(nsub,int(d.replace('-','')),np.int32))
-    del F,RR,T,mn,mx,wf,prs
-    if d in main_days:del main_days[d]
-    if d in ext_days:del ext_days[d]
-    for ptag,_ in PRIORS:pri[(ptag,0)].pop(d,None);pri[(ptag,1)].pop(d,None)
-    if len(FL)%20==0:gc.collect();log('fit buf days',len(FL),'elapsed',int(time.time()-t0),'s')
+        skipped.append(d)
+    gc.collect()
+# restore global day order so rows are identical to the pre-streaming build
+order=np.argsort(buf_days)
+FL[:]=[FL[i] for i in order];RL[:]=[RL[i] for i in order];TL[:]=[TL[i] for i in order];DL[:]=[DL[i] for i in order];XL[:]=[XL[i] for i in order]
 log('fit days used:',len(FL),'skipped:',skipped)
 n_days_used=len(FL)
 F=np.concatenate(FL);RR=np.concatenate(RL);T=np.concatenate(TL);D=np.concatenate(DL);XE=np.concatenate(XL);del FL,RL,TL,DL,XL
@@ -314,14 +340,8 @@ for d in win_days:
         need.setdefault((ptag,f'world-chunk-{mc}.tar.gz'),set()).add(d);need.setdefault((ptag,f'world-chunk-{64+mc}.tar.gz'),set()).add(d)
 ev_main={};ev_ext={}
 ev_pri={(ptag,0):{} for ptag,_ in PRIORS};ev_pri.update({(ptag,1):{} for ptag,_ in PRIORS})
-for (ptag,cname),dset in sorted(need.items()):
-    ci=int(cname.split('-')[2].split('.')[0])
-    if ptag==TAG:process_chunk(ptag,cname,dset,ev_main if ci<64 else ev_ext)
-    else:process_chunk(ptag,cname,dset,ev_pri[(ptag,1 if ci>=64 else 0)],rr_only=True)
-    log('streamed',ptag,cname,'elapsed',int(time.time()-t0),'s')
-for d in win_days:
-    for ptag,_ in PRIORS:
-        assert d in ev_pri[(ptag,0)] and d in ev_pri[(ptag,1)],f'eval day {d} missing prior {ptag}'
+wcids=sorted({int(c.split('-')[2].split('.')[0])%64 for (tg,c) in need})
+win_chunks=[(ci,sorted(need.get((TAG,f'world-chunk-{ci}.tar.gz'),()))) for ci in wcids]
 def met_acc():
     return {'n':0,'ae':0.0,'se':0.0,'h':0,'hh':0,'fa':0}
 def add(m,y,p):
@@ -333,33 +353,42 @@ acc={k:met_acc() for k in ['raw','cand']}
 hold={k:met_acc() for k in ['raw','cand']}
 per=[[met_acc(),met_acc()] for _ in REGIONS]  # [raw,cand] per region
 pkmax=0.0;finite_ok=True
-for d in win_days:
-    Fm,RRm,Tm=ev_main[d];Fe,RRe,Te=ev_ext[d]
-    F=np.concatenate([Fm,Fe]);RR=np.concatenate([RRm,RRe]);T=np.concatenate([Tm,Te])
-    del ev_main[d];del ev_ext[d]
-    prs=[np.concatenate([ev_pri[(ptag,0)][d],ev_pri[(ptag,1)][d]]) for ptag,_ in PRIORS]
-    for ptag,_ in PRIORS:ev_pri[(ptag,0)].pop(d,None);ev_pri[(ptag,1)].pop(d,None)
-    mn,mx,wf=nbr_stats(RR)
-    wet=RR>0
-    XE=np.column_stack([mn[wet],mx[wet],wf[wet]]+[p[wet] for p in prs]).astype(np.float32)
-    del prs,mn,mx,wf
-    X,QM=build_X(F[wet],RR[wet],reg_of[wet],qm,XE)
-    Gw_=reg_of[wet]
-    p0=np.maximum(0,QM+reg.predict(X).astype(np.float32))
-    p1=np.maximum(0,a_arr[Gw_]*p0+b_arr[Gw_])
-    pr=clf.predict_proba(X)[:,1]
-    pw=np.where(pr>=thr_arr[Gw_],np.maximum(p1,HEAVY),p1)
-    pw=np.where(abstain[Gw_],RR[wet],pw)   # abstained regions serve raw GFS (amount and flag)
-    p=np.zeros(len(RR),np.float32);p[wet]=pw
-    if not np.isfinite(p).all():finite_ok=False
-    pkmax=max(pkmax,float(p.max()))
-    add(acc['raw'],T,RR);add(acc['cand'],T,p)
-    hm=~elig
-    add(hold['raw'],T[hm],RR[hm]);add(hold['cand'],T[hm],p[hm])
-    for gi in range(len(REGIONS)):
-        m=reg_of==gi
-        add(per[gi][0],T[m],RR[m]);add(per[gi][1],T[m],p[m])
-    del F,RR,T,X,p;gc.collect()
+for ci,cdays in win_chunks:
+    cn=f'world-chunk-{ci}.tar.gz';en=f'world-chunk-{64+ci}.tar.gz'
+    if (TAG,cn) in need:process_chunk(TAG,cn,need[(TAG,cn)],ev_main);log('streamed',TAG,cn,'elapsed',int(time.time()-t0),'s')
+    if (TAG,en) in need:process_chunk(TAG,en,need[(TAG,en)],ev_ext);log('streamed',TAG,en,'elapsed',int(time.time()-t0),'s')
+    for ptag,_ in PRIORS:
+        if (ptag,cn) in need:process_chunk(ptag,cn,need[(ptag,cn)],ev_pri[(ptag,0)],rr_only=True);log('streamed',ptag,cn,'elapsed',int(time.time()-t0),'s')
+        if (ptag,en) in need:process_chunk(ptag,en,need[(ptag,en)],ev_pri[(ptag,1)],rr_only=True);log('streamed',ptag,en,'elapsed',int(time.time()-t0),'s')
+    for d in cdays:
+        for ptag,_ in PRIORS:
+            assert d in ev_pri[(ptag,0)] and d in ev_pri[(ptag,1)],f'eval day {d} missing prior {ptag}'
+        Fm,RRm,Tm=ev_main[d];Fe,RRe,Te=ev_ext[d]
+        F=np.concatenate([Fm,Fe]);RR=np.concatenate([RRm,RRe]);T=np.concatenate([Tm,Te])
+        del ev_main[d];del ev_ext[d]
+        prs=[np.concatenate([ev_pri[(ptag,0)][d],ev_pri[(ptag,1)][d]]) for ptag,_ in PRIORS]
+        for ptag,_ in PRIORS:ev_pri[(ptag,0)].pop(d,None);ev_pri[(ptag,1)].pop(d,None)
+        mn,mx,wf=nbr_stats(RR)
+        wet=RR>0
+        XE=np.column_stack([mn[wet],mx[wet],wf[wet]]+[p[wet] for p in prs]).astype(np.float32)
+        del prs,mn,mx,wf
+        X,QM=build_X(F[wet],RR[wet],reg_of[wet],qm,XE)
+        Gw_=reg_of[wet]
+        p0=np.maximum(0,QM+reg.predict(X).astype(np.float32))
+        p1=np.maximum(0,a_arr[Gw_]*p0+b_arr[Gw_])
+        pr=clf.predict_proba(X)[:,1]
+        pw=np.where(pr>=thr_arr[Gw_],np.maximum(p1,HEAVY),p1)
+        pw=np.where(abstain[Gw_],RR[wet],pw)   # abstained regions serve raw GFS (amount and flag)
+        p=np.zeros(len(RR),np.float32);p[wet]=pw
+        if not np.isfinite(p).all():finite_ok=False
+        pkmax=max(pkmax,float(p.max()))
+        add(acc['raw'],T,RR);add(acc['cand'],T,p)
+        hm=~elig
+        add(hold['raw'],T[hm],RR[hm]);add(hold['cand'],T[hm],p[hm])
+        for gi in range(len(REGIONS)):
+            m=reg_of==gi
+            add(per[gi][0],T[m],RR[m]);add(per[gi][1],T[m],p[m])
+        del F,RR,T,X,p;gc.collect()
 raw=fin(acc['raw']);mk=fin(acc['cand'])
 hold_m={k:fin(v) for k,v in hold.items()}
 regm={REGIONS[gi]:{'raw':fin(per[gi][0]),'candidate':fin(per[gi][1])} for gi in range(len(REGIONS))}
