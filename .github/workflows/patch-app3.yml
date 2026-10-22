@@ -1,6 +1,8 @@
 name: patch-app-hourly-mean-fix
 on:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   patch:
     runs-on: ubuntu-latest
