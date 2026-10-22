@@ -133,9 +133,13 @@ temp={}
 for name,la,lo in SITES:
     temp[name]={}
     try:
+        import datetime as _d
+        _maxend=(_d.date.today()-_d.timedelta(days=5)).isoformat()
         for y0,y1 in ((2021,2022),(2023,2024),(2025,2026)):
+            _e=min(f'{y1}-12-31',_maxend)
+            if f'{y0}-01-01'>_e:continue
             url=(f'https://archive-api.open-meteo.com/v1/archive?latitude={la}&longitude={lo}'
-                 f'&start_date={y0}-01-01&end_date={y1}-12-31&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FKolkata')
+                 f'&start_date={y0}-01-01&end_date={_e}&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FKolkata')
             j=json.loads(get(url))
             for t,mx,mn in zip(j['daily']['time'],j['daily']['temperature_2m_max'],j['daily']['temperature_2m_min']):
                 if mx is not None:temp[name][t]=[round(mx,1),round(mn,1)]
