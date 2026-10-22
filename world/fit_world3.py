@@ -130,39 +130,48 @@ def process_chunk(tag,cname,dayset,store,rr_only=False):
             eat_npz(tf.extractfile(m).read(),d,store,rr_only)
     tf.close();os.remove(f'{W}/{tag}-{cname}')
 m1={};e1={};m2={};e2={};m3={};e3={}
-need={}
+stores={('data-days-world',0):m1,('data-days-world',1):e1,('data-days-world-l2',0):m2,('data-days-world-l2',1):e2,('data-days-world-l3',0):m3,('data-days-world-l3',1):e3}
+n_main=980692
+skipped=[]
+# chunk-paired streaming (cancel fix, 2026-10-22): tag-major pass 1 stored every fit
+# day's full grids at once (~110MB x ~490 days) and got the job killed around the
+# 26th streamed chunk. Same days, same rows, same append order - but each main chunk
+# id is now streamed with its ext/l2/l3 partners and reduced to the fit subsample
+# immediately, so peak memory stays near one chunk instead of the whole corpus.
+days_by_mc={}
 for d in fit_days:
     mc=main_chunk(d)
     if mc is None:continue
-    need.setdefault(('data-days-world',f'world-chunk-{mc}.tar.gz'),set()).add(d)
-    need.setdefault(('data-days-world-l2',f'world-chunk-{mc}.tar.gz'),set()).add(d)
-    need.setdefault(('data-days-world-l3',f'world-chunk-{mc}.tar.gz'),set()).add(d)
+    days_by_mc.setdefault(mc,set()).add(d)
+def flush_fit_days(dlist):
+    for d in sorted(dlist):
+        ok=(d in m1 and d in e1 and d in m2 and d in e2 and d in m3 and d in e3)
+        if not ok:skipped.append((d,'missing lead coverage'));continue
+        F=np.concatenate([m1[d][0],e1[d][0]]);RR=np.concatenate([m1[d][1],e1[d][1]]);T=np.concatenate([m1[d][2],e1[d][2]])
+        r2=np.concatenate([m2[d],e2[d]]);r3=np.concatenate([m3[d],e3[d]])
+        if not(len(RR)==1000000 and len(r2)==1000000 and len(r3)==1000000):
+            skipped.append((d,'short rows'));continue
+        mn,mx,wf=nbr_stats(RR)
+        FL.append(F[sub]);RL.append(RR[sub]);TL.append(T[sub]);DL.append(np.full(nsub,int(d.replace('-','')),np.int32))
+        N1.append(mn[sub]);N2.append(mx[sub]);N3.append(wf[sub]);L2.append(r2[sub]);L3.append(r3[sub])
+        del F,RR,T,r2,r3,mn,mx,wf
+        for st in (m1,e1,m2,e2,m3,e3):st.pop(d,None)
+        if len(FL)%20==0:gc.collect();log('fit buf days',len(FL),'elapsed',int(time.time()-t0),'s')
+for mc in sorted(days_by_mc):
+    dset=days_by_mc[mc]
+    process_chunk('data-days-world',f'world-chunk-{mc}.tar.gz',dset,m1)
+    log('streamed data-days-world',f'world-chunk-{mc}.tar.gz','elapsed',int(time.time()-t0),'s')
     if mc<63:
-        for tag in ['data-days-world','data-days-world-l2','data-days-world-l3']:
-            need.setdefault((tag,f'world-chunk-{64+mc}.tar.gz'),set()).add(d)
-stores={('data-days-world',0):m1,('data-days-world',1):e1,('data-days-world-l2',0):m2,('data-days-world-l2',1):e2,('data-days-world-l3',0):m3,('data-days-world-l3',1):e3}
-for (tag,cname),dset in sorted(need.items()):
-    ci=int(cname.split('-')[2].split('.')[0])
-    rr_only=(tag!='data-days-world')
-    process_chunk(tag,cname,dset,stores[(tag,1 if ci>=64 else 0)],rr_only)
-    log('streamed',tag,cname,'elapsed',int(time.time()-t0),'s')
-n_main=980692
-skipped=[]
-for d in sorted(fit_days):
-    if d=='2021-03-24':
-        skipped.append((d,'special day not in l2/l3'));continue
-    ok=(d in m1 and d in e1 and d in m2 and d in e2 and d in m3 and d in e3)
-    if not ok:skipped.append((d,'missing lead coverage'));continue
-    F=np.concatenate([m1[d][0],e1[d][0]]);RR=np.concatenate([m1[d][1],e1[d][1]]);T=np.concatenate([m1[d][2],e1[d][2]])
-    r2=np.concatenate([m2[d],e2[d]]);r3=np.concatenate([m3[d],e3[d]])
-    if not(len(RR)==1000000 and len(r2)==1000000 and len(r3)==1000000):
-        skipped.append((d,'short rows'));continue
-    mn,mx,wf=nbr_stats(RR)
-    FL.append(F[sub]);RL.append(RR[sub]);TL.append(T[sub]);DL.append(np.full(nsub,int(d.replace('-','')),np.int32))
-    N1.append(mn[sub]);N2.append(mx[sub]);N3.append(wf[sub]);L2.append(r2[sub]);L3.append(r3[sub])
-    del F,RR,T,r2,r3,mn,mx,wf
-    for st in (m1,e1,m2,e2,m3,e3):st.pop(d,None)
-    if len(FL)%20==0:gc.collect();log('fit buf days',len(FL),'elapsed',int(time.time()-t0),'s')
+        process_chunk('data-days-world',f'world-chunk-{64+mc}.tar.gz',dset,e1)
+        log('streamed data-days-world',f'world-chunk-{64+mc}.tar.gz','elapsed',int(time.time()-t0),'s')
+    for ptag,pstores in (('data-days-world-l2',(m2,e2)),('data-days-world-l3',(m3,e3))):
+        process_chunk(ptag,f'world-chunk-{mc}.tar.gz',dset,pstores[0],rr_only=True)
+        log('streamed',ptag,f'world-chunk-{mc}.tar.gz','elapsed',int(time.time()-t0),'s')
+        if mc<63:
+            process_chunk(ptag,f'world-chunk-{64+mc}.tar.gz',dset,pstores[1],rr_only=True)
+            log('streamed',ptag,f'world-chunk-{64+mc}.tar.gz','elapsed',int(time.time()-t0),'s')
+    flush_fit_days(dset);gc.collect()
+if '2021-03-24' in fit_days:skipped.insert(0,('2021-03-24','special day not in l2/l3'))
 log('fit days used:',len(FL),'skipped:',skipped)
 n_days_used=len(FL)
 F=np.concatenate(FL);RR=np.concatenate(RL);T=np.concatenate(TL);D=np.concatenate(DL)
