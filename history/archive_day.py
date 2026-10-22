@@ -150,6 +150,43 @@ for name,lat,lon,region in SITES:
     time.sleep(0.4)
 log('captured new original rows:',captured)
 
+# --- append newly completed days to the per-year history files from the as-served originals ---
+# a target day is complete once its 24/48/72h originals were all captured; the row carries the
+# as-served raw values, observed stays empty until the ERA5 refresh below fills it.
+today_s=dt.datetime.now(ZoneInfo('Asia/Kolkata')).date().isoformat()
+HCOLS=['date','raw_gfs_24h_mm','corrected_24h_mm_replay','observed_rain_mm_era5','observed_tmax_c_era5','observed_tmin_c_era5','raw_gfs_48h_mm','raw_gfs_72h_mm']
+appended=0
+for name,lat,lon,region in SITES:
+    odir=os.path.join('app','history','originals',name)
+    if not os.path.isdir(odir):continue
+    bydate={}
+    for yf in sorted(os.listdir(odir)):
+        if not yf.endswith('.json'):continue
+        odoc=json.load(open(os.path.join(odir,yf)))
+        for r in odoc['rows']:
+            if r[0]<today_s:bydate.setdefault(r[0],{})[r[1]]=r[2]
+    fp_cache={}
+    for date,leads in sorted(bydate.items()):
+        if not all(l in leads for l in (24,48,72)):continue
+        y=date[:4];fp=os.path.join('app','history',name,y+'.json')
+        if fp not in fp_cache:
+            if os.path.exists(fp):
+                doc=json.load(open(fp))
+                if doc['columns']!=HCOLS:log('append skipped, unexpected columns',fp);fp_cache[fp]=None;continue
+            else:
+                doc={'site':name,'year':y,'columns':HCOLS,'rows':[]}
+            fp_cache[fp]=[doc,False]
+        ent=fp_cache[fp]
+        if ent is None:continue
+        doc,dirty=ent
+        if any(r[0]==date for r in doc['rows']):continue
+        doc['rows']=sorted(doc['rows']+[[date,leads[24],None,None,None,None,leads[48],leads[72]]])
+        doc['raw_recent_note']='Rows appended from the nightly as-served capture: raw GFS is the value the live site actually served (provider feed at the named place); older rows come from the NOAA grib archive at the nearest network point. Observed fills in later - ERA5 itself publishes about 5 days late.'
+        ent[1]=True;appended+=1
+    for fp,ent in fp_cache.items():
+        if ent and ent[1]:json.dump(ent[0],open(fp,'w'),separators=(',',':'))
+log('appended new day rows from originals:',appended)
+
 # --- refresh observed rain/temp for trailing days in the backfill year files ---
 today_i=dt.datetime.now(ZoneInfo('Asia/Kolkata')).date()
 start=(today_i-dt.timedelta(days=14)).isoformat();end=(today_i-dt.timedelta(days=5)).isoformat()
@@ -157,7 +194,7 @@ updated=0
 for name,lat,lon,region in SITES:
     try:
         url=('https://archive-api.open-meteo.com/v1/archive?latitude=%s&longitude=%s&start_date=%s&end_date=%s'
-             '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%%2FKolkata')%(lat,lon,start,end)
+             '&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%%2FKolkata&models=era5')%(lat,lon,start,end)
         j=json.loads(get(url))['daily']
     except Exception as e:
         log('observed refresh failed',name,e);continue
@@ -172,7 +209,7 @@ for name,lat,lon,region in SITES:
                 if ps is not None and row[3] is None:row[3]=round(ps,2);changed=True
                 if tmx is not None and row[4] is None:row[4]=round(tmx,1);row[5]=round(tmn,1) if tmn is not None else row[5];changed=True
         if changed:
-            doc['observed_recent_note']='Recent observed values: ERA5 via Open-Meteo archive API grid cell (same family as corpus ERA5), refreshed nightly once the lag clears.'
+            doc['observed_recent_note']='Recent observed values: final ERA5 via Open-Meteo archive API grid cell (models=era5, same family as corpus ERA5), filled in nightly as ERA5 publishes (about 5 days late).'
             json.dump(doc,open(fp,'w'),separators=(',',':'));updated+=1
     time.sleep(0.4)
 log('observed refresh files updated:',updated)
