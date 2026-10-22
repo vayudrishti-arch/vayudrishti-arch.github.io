@@ -1,0 +1,48 @@
+# One-off: swap live 72h model to world-fit-l3-v5 + matching disclosure updates.
+# Approved by the user Oct 22, 2026 ~4:03 PM IST ("Yes" to l3-v5 72h swap with disclosure update).
+name: deploy-72h-l3v5
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swap model + update disclosures
+        run: |
+          set -e
+          curl -sL "https://github.com/vayudrishti-arch/vayudrishti-arch.github.io/releases/download/world-fit-l3-v5/world-lead3-model.json" -o /tmp/l3.json
+          python3 - <<'PY'
+          import json
+          # 1) model file: v5 fit, version label made truthful (fit script reused the old label)
+          d=json.load(open('/tmp/l3.json'))
+          assert d['lead']==3 and d['abstain']==['antarctica','middle_east','north_asia','oceania','west'], d['abstain']
+          d['version']='world-l3-v5-2026-10-22'
+          json.dump(d,open('app/world-lead3-model.json','w'),separators=(',',':'))
+          # 2) disclosure text, exactly matching the pinned-window metrics (2026-08-12..10-12)
+          p='app/index.html'; s=open(p).read()
+          r1o='models world-v6, world-l2-v2, world-l3-v3'
+          r1n='models world-v6, world-l2-v2, world-l3-v5'
+          assert s.count(r1o)==2, s.count(r1o)
+          s=s.replace(r1o,r1n)
+          r2o='(models world-l2-v2 and world-l3-v3)'
+          r2n='(models world-l2-v2 and world-l3-v5)'
+          assert s.count(r2o)==1, s.count(r2o)
+          s=s.replace(r2o,r2n)
+          r3o='<strong>72h (world-l3-v3)</strong>: MAE 1.570 mm vs 1.769 for raw GFS (11.2% better); heavy rain 6,054 hits vs 4,778 (+27%); false alarms 40,514 vs 40,845 overall (fewer than raw), but 5,014 vs 4,873 (+2.9%) at never-fitted points, marginally above the same gate.'
+          r3n='<strong>72h (world-l3-v5)</strong>: MAE 1.569 mm vs 1.769 for raw GFS (11.3% better); heavy rain 6,399 hits vs 4,778 (+34%); false alarms 38,885 vs 40,845 overall (fewer than raw), and 4,722 vs 4,873 (fewer than raw) at never-fitted points; all 28 quality gates pass.'
+          assert s.count(r3o)==1, s.count(r3o)
+          s=s.replace(r3o,r3n)
+          assert 'world-l3-v3' not in s
+          open(p,'w').write(s)
+          print('model + 3 disclosures applied')
+          PY
+      - name: Commit
+        run: |
+          git config user.name "vayudrishti-bot"
+          git config user.email "bot@vayudrishti.local"
+          git add app/world-lead3-model.json app/index.html
+          git diff --cached --quiet || git commit -m "72h: serve world-l3-v5 (all 28 gates pass) + disclosure update"
+          git push
