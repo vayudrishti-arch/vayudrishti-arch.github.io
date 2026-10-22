@@ -30,7 +30,7 @@ import numpy as np
 REPO=os.environ.get('GITHUB_REPOSITORY','vayudrishti-arch/vayudrishti-arch.github.io')
 W='/tmp/fitw';os.makedirs(W,exist_ok=True)
 EVAL_DAYS=60;MIN_HEAVY=300;HEAVY=64.5
-FIT_DAY_STRIDE=16;FIT_POINT_STRIDE=4
+FIT_DAY_STRIDE=int(os.environ.get('VD_DAY_STRIDE','16'));FIT_POINT_STRIDE=int(os.environ.get('VD_POINT_STRIDE','4'))
 TAG=os.environ.get('VD_TAG','data-days-world');LEAD=int(os.environ.get('VD_LEAD','1'));OUT=os.environ.get('VD_OUT','world-fit')
 # serve-time-honest prior runs per lead: a 48h forecast can see the (24h older) 72h run;
 # a 72h forecast is the earliest run we archive, so no priors exist for it.
