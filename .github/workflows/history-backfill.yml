@@ -1,0 +1,23 @@
+name: history-backfill
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy
+      - name: build per-site history from the verified corpus
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 history/backfill.py
+      - name: commit history files
+        run: |
+          git config user.name "vayudrishti-nightly"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/history
+          if ! git diff --cached --quiet; then git commit -m "history: backfill raw GFS + ERA5 + 24h replay from corpus"; git pull --rebase -q; git push; fi
