@@ -1,0 +1,28 @@
+# Ensemble eval B (approved by the owner Oct 22, 2026 ~5:23 PM IST: "Combine both"):
+# average the live v5 and 4x-trial corrections per lead, scored through the SAME
+# pinned-window gate harness as fit_worldl4.py. EVAL ONLY - uploads metrics to a
+# separate -ens release; never touches live models or the app.
+name: eval-ens
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: eval-ens
+  cancel-in-progress: false
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        lead: [2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy xgboost
+      - name: ensemble eval B (lead ${{ matrix.lead }})
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VD_LEAD: ${{ matrix.lead }}
+        run: python3 world/eval_ens.py
