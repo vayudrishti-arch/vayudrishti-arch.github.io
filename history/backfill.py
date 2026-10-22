@@ -36,6 +36,7 @@ tarfile.open(f'{W}/rb.tgz').extractall(f'{W}/rb')
 pts=json.load(open(f'{W}/rb/points9112.json'))
 plat=np.array([p['latitude'] for p in pts]);plon=np.array([p['longitude'] for p in pts])
 preg=[p['region'] for p in pts]
+coord2reg={(round(p['latitude'],4),round(p['longitude'],4)):p['region'] for p in pts}
 sidx=[];sreg=[];sdist=[]
 for name,la,lo in SITES:
     d=(plat-la)**2+(plon-lo)**2;i=int(d.argmin())
@@ -106,12 +107,21 @@ series={name:{} for name,_,_ in SITES}
 def one(date):
     b=get(assets[date+'.npz'])
     z=np.load(io.BytesIO(b))
-    F=z['F'][sidx];RR=z['RR'][sidx];T=z['T'][sidx]
-    return date,F,RR,T
+    Fa=z['F']
+    lat=Fa[:,15];lon=Fa[:,16]
+    idx=[];regs=[]
+    for name,la,lo in SITES:
+        d=(lat-la)**2+(lon-lo)**2;i=int(d.argmin());idx.append(i)
+        key=(round(float(lat[i]),4),round(float(lon[i]),4))
+        rg=coord2reg.get(key)
+        if rg is None:
+            j=int(((plat-lat[i])**2+(plon-lon[i])**2).argmin());rg=preg[j]
+        regs.append(rg)
+    return date,Fa[idx],z['RR'][idx],z['T'][idx],regs
 t0=time.time();done=0
 with concurrent.futures.ThreadPoolExecutor(8) as ex:
-    for date,F,RR,T in ex.map(one,days):
-        corr=replay24(F,RR,sreg)
+    for date,F,RR,T,regs in ex.map(one,days):
+        corr=replay24(F,RR,regs)
         for k,(name,_,_) in enumerate(SITES):
             series[name][date]=[round(float(RR[k]),2),round(float(corr[k]),2),round(float(T[k]),2)]
         done+=1
@@ -132,7 +142,7 @@ for name,la,lo in SITES:
 # write chunked history files
 OUT=os.path.join(os.getcwd(),'app','history')
 os.makedirs(OUT,exist_ok=True)
-index={'generated_utc':dt.datetime.utcnow().isoformat(timespec='seconds')+'Z','sites':{},'years':{},
+index={'corpus_days':len(days),'corpus_note':'The archived corpus does not contain every calendar day; only days listed in the files are real archived data.','generated_utc':dt.datetime.utcnow().isoformat(timespec='seconds')+'Z','sites':{},'years':{},
  'labels':{'raw':'Raw GFS 24h forecast for that day (as archived in the verified corpus)',
   'corrected_24h':'RECONSTRUCTION: current live 24h model replayed on archived data. Not the original live forecast (predictions were not stored before 2026-10-22).',
   'observed_rain':'Observed daily rain, ERA5 reanalysis (our verified corpus). ERA5 publishes with a lag of several days; recent days may be missing.',
