@@ -1,0 +1,56 @@
+# One-off: swap live 48h model to world-fit-l2-v5 with west+oceania added to the abstain
+# list (served config), + matching disclosure updates.
+# Approved by the user Oct 22, 2026 ~4:03 PM IST ("Add both existing for rest regions and
+# west remains the old one. Or do better") - new model for every region except west
+# (and oceania, matching the live l2-v2 list), disclosed plainly as a post-window choice.
+name: deploy-48h-l2v5
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swap model + update disclosures
+        run: |
+          set -e
+          curl -sL "https://github.com/vayudrishti-arch/vayudrishti-arch.github.io/releases/download/world-fit-l2-v5/world-lead2-model.json" -o /tmp/l2.json
+          python3 - <<'PY'
+          import json
+          # 1) model file: v5 fit; abstain patched to the SERVED list (west+oceania added
+          # after window results were seen; disclosed on the site); version label made
+          # truthful (fit script reused the old v2 label)
+          d=json.load(open('/tmp/l2.json'))
+          assert d['lead']==2 and d['abstain']==['antarctica','middle_east'], d['abstain']
+          d['abstain']=['antarctica','middle_east','oceania','west']
+          d['version']='world-l2-v5-2026-10-22'
+          json.dump(d,open('app/world-lead2-model.json','w'),separators=(',',':'))
+          # 2) disclosure text, exactly matching the served-config eval on the pinned
+          # window 2026-08-12..10-12 (world-fit-l2-v5/world-fit-l2-served-metrics.json,
+          # all 28 gates pass on the served configuration)
+          p='app/index.html'; s=open(p).read()
+          r1o='models world-v6, world-l2-v2, world-l3-v5'
+          r1n='models world-v6, world-l2-v5, world-l3-v5'
+          assert s.count(r1o)==2, s.count(r1o)
+          s=s.replace(r1o,r1n)
+          r2o='(models world-l2-v2 and world-l3-v5)'
+          r2n='(models world-l2-v5 and world-l3-v5)'
+          assert s.count(r2o)==1, s.count(r2o)
+          s=s.replace(r2o,r2n)
+          r3o='<strong>48h (world-l2-v2)</strong> adds neighborhood rain context and the prior 72h run for the same day: MAE 1.431 mm vs 1.636 for raw GFS (12.6% better); heavy rain (&ge;64.5 mm/day) 10,155 hits vs 7,118 for raw GFS (+43%). Known misses, shown openly: false alarms 43,940 vs 41,274 (+6.4%), and 5,392 vs 5,014 (+7.5%) at never-fitted points, both above its 2% false-alarm gate.'
+          r3n='<strong>48h (world-l2-v5)</strong> adds neighborhood rain context and the prior 72h run for the same day: MAE 1.428 mm vs 1.636 for raw GFS (12.7% better); heavy rain (&ge;64.5 mm/day) 10,089 hits vs 7,118 for raw GFS (+42%); false alarms 40,579 vs 41,274 overall (fewer than raw), and 4,953 vs 5,014 (fewer than raw) at never-fitted points; all 28 quality gates pass on this served configuration. In the western-India and Oceania regions the new model did not beat raw GFS in its checks, so 48h keeps serving raw GFS there, same as before; adding those two regions to the keep-raw list was chosen after the evaluation-window results were seen, disclosed openly (owner-approved October 22, 2026).'
+          assert s.count(r3o)==1, s.count(r3o)
+          s=s.replace(r3o,r3n)
+          assert 'world-l2-v2' not in s
+          open(p,'w').write(s)
+          print('model + 3 disclosures applied')
+          PY
+      - name: Commit
+        run: |
+          git config user.name "vayudrishti-bot"
+          git config user.email "bot@vayudrishti.local"
+          git add app/world-lead2-model.json app/index.html
+          git diff --cached --quiet || git commit -m "48h: serve world-l2-v5 with west+oceania abstaining (all 28 gates pass on served config) + disclosure update"
+          git push
