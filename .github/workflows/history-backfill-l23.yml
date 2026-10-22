@@ -1,0 +1,22 @@
+# One-off (runnable any time): extend app/history rows with raw GFS 48h/72h (v2/v3).
+name: history-backfill-l23
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 history/backfill_l23.py
+      - name: Commit extended history
+        run: |
+          git config user.name "vayudrishti-bot"
+          git config user.email "bot@vayudrishti.local"
+          git add app/history
+          git diff --cached --quiet || git commit -m "history: raw GFS 48/72h columns (v2/v3) from world corpus"
+          git push
