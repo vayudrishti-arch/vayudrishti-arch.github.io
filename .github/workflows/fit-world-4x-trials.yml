@@ -1,0 +1,40 @@
+# Research-only 4x-day trial fits (NO deploy): day stride 4 (~491 pre-window days, 2x the
+# v5 fits' 244) with point stride 16 (62.5k pts/day) so total fit rows ~= v5 (RAM-safe).
+# Requested by the user Oct 22, 2026 ~5:08 PM IST ("More days aren't possible?"). Outputs
+# go to separate trial releases world-fit-l2-4x / world-fit-l3-4x, clearly not deployed.
+name: fit-world-4x-trials
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fit-l2:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy xgboost scikit-learn
+      - name: 48h 4x-day trial fit (research only, no deploy)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VD_LEAD: '2'
+          VD_TAG: data-days-world-l2
+          VD_OUT: world-fit-l2-4x
+          VD_DAY_STRIDE: '4'
+          VD_POINT_STRIDE: '16'
+        run: python3 world/fit_worldl4.py
+  fit-l3:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install numpy xgboost scikit-learn
+      - name: 72h 4x-day trial fit (research only, no deploy)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VD_LEAD: '3'
+          VD_TAG: data-days-world-l3
+          VD_OUT: world-fit-l3-4x
+          VD_DAY_STRIDE: '4'
+          VD_POINT_STRIDE: '16'
+        run: python3 world/fit_worldl4.py
