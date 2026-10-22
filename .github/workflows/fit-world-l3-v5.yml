@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip install numpy xgboost scikit-learn
-      - name: worldwide lead-3 fit v5 (more days: stride 8 x point 8 = 246d x 125k) + gates
+      - name: worldwide lead-3 fit v5 (more days, stride 8 x point 8 = 246d x 125k) + gates
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VD_LEAD: '3'
