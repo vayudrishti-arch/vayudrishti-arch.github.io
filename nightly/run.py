@@ -83,13 +83,23 @@ def fetch_new(days_dir,pipe_dir,have):
     got=[];errs=[]
     if not todo:return got,errs,str(last)
     sys.path.insert(0,pipe_dir);import vdlib as v,concurrent.futures as cf
+    _get=v.get
+    def logged_get(url,rng=None,tries=4):           # record which URL failed; query strings stripped (public URLs only)
+        try:return _get(url,rng,tries)
+        except Exception as e:raise RuntimeError(f"GET {url.split('?')[0]} failed: {e!r}") from e
+    v.get=logged_get
     pool=cf.ThreadPoolExecutor(48)
     for date in todo:
-        try:
-            a,nb=v.fetch_gfs_day(date,pool);f,raw=v.assemble(date,a);tg=v.fetch_era_day(date)
-            if not np.isfinite(tg).all():raise ValueError('non-finite ERA5')
-        except Exception as e:
-            errs.append((date,repr(e)[:160]));break   # stop at first gap so the corpus stays contiguous
+        for attempt in range(3):                    # bounded retries so a transient fetch error cannot stall the corpus
+            try:
+                a,nb=v.fetch_gfs_day(date,pool);f,raw=v.assemble(date,a);tg=v.fetch_era_day(date)
+                if not np.isfinite(tg).all():raise ValueError('non-finite ERA5')
+                break
+            except Exception as e:
+                if attempt==2:errs.append((date,repr(e)[:300]));log('fetch_stopped',date,repr(e)[:300])
+                else:time.sleep(20*(attempt+1))
+        else:
+            break   # stop at first gap so the corpus stays contiguous
         p=os.path.join(days_dir,f'{date}.npz');np.savez_compressed(p+'.tmp.npz',F=f,RR=raw,T=tg.astype(np.float32));os.replace(p+'.tmp.npz',p);got.append(date)
     return got,errs,str(last)
 def upload_days(got,days_dir):
