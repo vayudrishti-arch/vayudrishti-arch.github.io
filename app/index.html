@@ -208,4 +208,121 @@ async function renderH6(site,date){
   renderPF();
 })();
 })();
+</script>
+<script>
+/* Device-local run history (approved by user Nov 2, 2026). DOM-scraping design (app code is module-scoped).
+   - Saves each completed run (place, issue time, timezone, per-day lead/raw/trained, model scope+version, units)
+     to localStorage. Capture is debounced until the render is idle (world lead-2/3 models lazy-load and re-render).
+   - "Your recent runs" panel pairs saved runs with observed ERA5 (archive API, ~5-6 day lag), in the run's own
+     timezone so the ERA5 local-day window matches the app's local midnight-to-midnight accumulation.
+   - Immutable originals: raw/trained are never recomputed. A re-render of the SAME run (same place, dates and raw
+     values) may only fill values that were null at first capture (lazy model load), never change a saved number.
+   - Retention: 50 most recent runs, oldest evicted. Save failures are shown, not hidden. */
+(function(){
+if(!document.getElementById('dailyRows'))return;
+const KEY='vayudrishti-runs-v1',MAX=50;
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return[]}}
+let saveError='';
+function save(rs){
+  try{localStorage.setItem(KEY,JSON.stringify(rs.slice(0,MAX)));saveError='';}
+  catch(e){saveError='Could not save the latest run - browser storage is full or blocked.';}
+}
+function mm(v){return v==null?'-':(Math.round(v*100)/100)+' mm'}
+function parseMm(s){const m=/(-?\d+(?:\.\d+)?)/.exec(s||'');return m?+m[1]:null}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function scrapeRun(){
+  const res=document.getElementById('results');if(res&&res.hidden)return null;  // render not complete / stale rows
+  const rows=[...document.querySelectorAll('#dailyRows tr')];if(!rows.length)return null;
+  const days=rows.map(r=>{const c=[...r.children].map(x=>x.textContent.trim());
+    return {date:c[0],lead_days:parseInt(c[1])/24||null,raw_gfs:parseMm(c[2]),trained:parseMm(c[3])};})
+    .filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d.date)&&d.raw_gfs!=null);
+  if(!days.length)return null;
+  const info=(document.getElementById('runInfo')||{}).textContent||'';
+  const coords=/(-?\d+\.\d+),\s*(-?\d+\.\d+)/.exec(info);
+  const tz=/timezone\s+([A-Za-z_]+\/[A-Za-z_]+)/.exec(info);
+  const cov=(document.getElementById('coverageNote')||{}).textContent||'';
+  const india=/Nearest network point/.test(cov);
+  let version='unknown';
+  if(india){
+    try{const s=[...document.scripts].map(x=>x.textContent).join('\n');
+      const m=/const ENSEMBLE=\{"version":"([^"]+)"/.exec(s);if(m)version=m[1];}catch(e){}
+  }else{
+    const wm=/models (world-v\d+), (world-l\d-v\d+), (world-l\d-v\d+)/.exec(cov);
+    if(wm)version=wm[1]+' + '+wm[2]+' + '+wm[3];
+  }
+  return {place:{name:(document.getElementById('placeTitle')||{}).textContent||'Unknown place',
+            lat:coords?+coords[1]:null,lon:coords?+coords[2]:null},
+    timezone:tz?tz[1]:null,scope:india?'india-network':'world',
+    issued_at:new Date().toISOString(),model_version:version,units:'mm',days};
+}
+let pending=null;
+function onRender(){
+  clearTimeout(pending);
+  pending=setTimeout(()=>{
+    const run=scrapeRun();if(!run)return;
+    const rs=load();
+    // Same original run (same place, dates and raw values): only fill previously-null trained values.
+    const same=rs.find(r=>r.place.name===run.place.name&&r.days.length===run.days.length&&
+      r.days.every((d,i)=>d.date===run.days[i].date&&d.raw_gfs===run.days[i].raw_gfs));
+    if(same){
+      let changed=false;
+      same.days.forEach((d,i)=>{if(d.trained==null&&run.days[i].trained!=null){d.trained=run.days[i].trained;changed=true}});
+      if(changed){save(rs);refresh();}
+      return;
+    }
+    rs.unshift(run);save(rs);refresh();
+  },800);
+}
+async function fillObserved(run){
+  if(run.place.lat==null||run.place.lon==null)return;
+  const today=new Date().toISOString().slice(0,10);
+  for(const d of run.days){
+    if(typeof d.observed_era5==='number')continue;      // only a real value locks; null stays pending
+    if(d.date>=today){d.observed_era5=null;continue}
+    if((new Date(today)-new Date(d.date))/86400000<6){d.observed_era5=null;continue}  // ERA5 publishes ~5-6 days late
+    try{
+      const u='https://archive-api.open-meteo.com/v1/archive?'+new URLSearchParams({
+        latitude:run.place.lat,longitude:run.place.lon,start_date:d.date,end_date:d.date,
+        daily:'rain_sum',timezone:run.timezone||'auto'});   // run timezone: ERA5 local day = app accumulation window
+      const j=await(await fetch(u)).json();
+      const dd=j&&j.daily||{};
+      const v=dd.rain_sum&&dd.rain_sum[0];                     // rain only, matches production tp-minus-snow semantics; no silent quantity substitution
+      if(v!=null)d.observed_era5=+v.toFixed(2);                // lock only real values; missing stays pending and retries on a later visit
+    }catch(e){}
+  }
+}
+function dayRow(d){
+  return '<div style="padding:6px 0;border-top:1px solid rgba(128,128,128,.25);font-size:13px;line-height:1.5">'+
+    '<b>'+d.date+'</b> (local day +'+d.lead_days+' from issue - '+(d.lead_days*24)+'h slot)<br>'+
+    'Raw GFS '+mm(d.raw_gfs)+' &middot; Trained '+mm(d.trained)+'<br>'+
+    'Observed (ERA5): '+(d.observed_era5===undefined?'checking...':(d.observed_era5===null?'not in yet (~5-6 day lag)':mm(d.observed_era5)))+
+    (d.observed_era5!=null&&d.trained!=null?' &middot; |trained error| '+mm(Math.abs(d.trained-d.observed_era5)):'')+
+    '</div>';
+}
+function panel(){
+  let sec=document.getElementById('recentRuns');
+  if(!sec){
+    sec=document.createElement('section');sec.id='recentRuns';
+    sec.style.cssText='margin:24px auto;max-width:760px;width:100%;padding:16px;border:1px solid rgba(128,128,128,.35);border-radius:8px;overflow-wrap:anywhere';
+    const pf=document.getElementById('pfSite');
+    const anchor=pf?pf.closest('section'):null;
+    (anchor&&anchor.parentNode||document.body).insertBefore(sec,anchor?anchor.nextSibling:null);
+  }
+  const rs=load();
+  sec.innerHTML='<h2 style="margin:0 0 6px;font-size:20px">Your recent runs (this device only)</h2>'+
+    '<p style="color:#888;font-size:13px;margin:0 0 8px;line-height:1.5">Saved in this browser when you load a forecast. Keeps the '+MAX+' most recent runs; the oldest are removed as new ones are saved, and clearing browser storage removes this history. Raw and trained values are the originals from that run and are never recomputed. Slots are whole local days counted from issue time, not exact 24/48/72-hour offsets. Observed rain is ERA5 rain (excludes snow) for the place-local day and fills in about 5-6 days late.</p>'+
+    (saveError?'<p style="color:#b00020;font-size:13px">'+esc(saveError)+'</p>':'')+
+    (rs.length?'':'<p style="font-size:13px">No runs saved yet - load a forecast and it will appear here.</p>');
+  rs.slice(0,10).forEach(run=>{
+    const div=document.createElement('div');div.style.margin='12px 0';
+    div.innerHTML='<b>'+esc(run.place.name)+'</b> <span style="color:#888;font-size:12px">saved '+run.issued_at.slice(0,16).replace('T',' ')+' UTC'+
+      (run.timezone?' - place timezone '+esc(run.timezone):'')+' - '+(run.scope==='india-network'?'India network model ':'world model ')+esc(run.model_version)+' - units '+run.units+'</span>'+
+      run.days.map(dayRow).join('');
+    sec.appendChild(div);
+  });
+}
+async function refresh(){const rs=load();for(const r of rs.slice(0,10))await fillObserved(r);save(rs);panel()}
+new MutationObserver(onRender).observe(document.getElementById('dailyRows'),{childList:true});
+refresh();
+})();
 </script></body></html>
